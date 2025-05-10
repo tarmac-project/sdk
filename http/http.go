@@ -1,3 +1,98 @@
+/*
+Package http provides a client for making HTTP requests from WebAssembly functions running in Tarmac.
+
+This package allows Tarmac functions to make outbound HTTP requests to external services. It uses the
+Web Assembly Procedure Call (waPC) protocol to communicate with the Tarmac host, which handles the
+actual HTTP communication.
+
+# Basic Usage
+
+Create a client and make requests:
+
+	client, err := http.New(http.Config{
+	    Namespace: "my-service",
+	})
+	if err != nil {
+	    // handle error
+	}
+
+	// Make a GET request
+	resp, err := client.Get("https://example.com")
+	if err != nil {
+	    // handle error
+	}
+
+	// Read the response body
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+	    // handle error
+	}
+
+	// Use the response data
+	fmt.Println(string(data))
+
+# Making POST/PUT Requests
+
+Send data with POST/PUT requests:
+
+	// POST request with JSON body
+	jsonBody := strings.NewReader(`{"key":"value"}`)
+	resp, err := client.Post("https://example.com/api", "application/json", jsonBody)
+	if err != nil {
+	    // handle error
+	}
+
+	// PUT request
+	resp, err := client.Put("https://example.com/resource/123", "application/json", jsonBody)
+	if err != nil {
+	    // handle error
+	}
+
+# Custom Requests
+
+Create custom requests with headers:
+
+	// Create a custom request
+	req, err := http.NewRequest("PATCH", "https://example.com/resource", jsonBody)
+	if err != nil {
+	    // handle error
+	}
+
+	// Add custom headers
+	req.Header.Set("Authorization", "Bearer token123")
+	req.Header.Set("X-Custom-Header", "value")
+
+	// Send the custom request
+	resp, err := client.Do(req)
+	if err != nil {
+	    // handle error
+	}
+
+# Testing with Mocks
+
+The http/mock subpackage provides a simple way to mock HTTP responses for testing:
+
+	import "github.com/tarmac-project/sdk/http/mock"
+
+	// Create a mock HTTP client
+	mockClient := mock.New(mock.Config{
+	    DefaultResponse: &mock.Response{
+	        StatusCode: 200,
+	        Status: "OK",
+	        Body: []byte(`{"success":true}`),
+	    },
+	})
+
+	// Configure specific endpoint responses
+	mockClient.On("GET", "https://example.com/api").Return(&mock.Response{
+	    StatusCode: 200,
+	    Status: "OK",
+	    Body: []byte(`{"data":"example"}`),
+	})
+
+	// Configure an error response
+	mockClient.On("GET", "https://example.com/error").ReturnError(fmt.Errorf("connection failed"))
+*/
 package http
 
 import (
@@ -8,9 +103,11 @@ import (
 	"net/url"
 
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
+	wapc "github.com/wapc/wapc-guest-tinygo"
 	pb "google.golang.org/protobuf/proto"
 )
 
+// Client provides an interface for making HTTP requests
 type Client interface {
 	Get(url string) (*Response, error)
 	Post(url, contentType string, body io.Reader) (*Response, error)
@@ -19,10 +116,19 @@ type Client interface {
 	Do(req *Request) (*Response, error)
 }
 
+// Config provides configuration options for the HTTP client
 type Config struct {
-	Namespace          string
+	// Namespace controls the function namespace to use for host callbacks
+	// The default value is "default" which is the global namespace
+	Namespace string
+
+	// InsecureSkipVerify controls whether the client verifies the
+	// server's certificate chain and host name
 	InsecureSkipVerify bool
-	HostCall           func(string, string, string, []byte) ([]byte, error)
+
+	// HostCall is used internally for host callbacks
+	// This is mainly here for testing
+	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
 type httpClient struct {
@@ -30,6 +136,7 @@ type httpClient struct {
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// Response represents an HTTP response
 type Response struct {
 	Status     string
 	StatusCode int
@@ -37,6 +144,7 @@ type Response struct {
 	Body       io.ReadCloser
 }
 
+// Request represents an HTTP request to be sent by the client
 type Request struct {
 	Method string
 	URL    *url.URL
@@ -44,8 +152,23 @@ type Request struct {
 	Body   io.ReadCloser
 }
 
+// New creates a new HTTP client with the provided configuration
 func New(config Config) (Client, error) {
-	return &httpClient{hostCall: config.HostCall, cfg: config}, nil
+	// Set default namespace if not provided
+	if config.Namespace == "" {
+		config.Namespace = "default"
+	}
+
+	// Use the provided host call function or default to waPC.HostCall
+	hostCallFn := config.HostCall
+	if hostCallFn == nil {
+		hostCallFn = wapc.HostCall
+	}
+
+	return &httpClient{
+		hostCall: hostCallFn,
+		cfg:      config,
+	}, nil
 }
 
 func (c *httpClient) Get(url string) (*Response, error) {
@@ -61,7 +184,7 @@ func (c *httpClient) Get(url string) (*Response, error) {
 		return &Response{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := c.hostCall(c.cfg.Namespace, "http", "http", b)
+	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
 	if err != nil {
 		return &Response{}, fmt.Errorf("host returned error: %w", err)
 	}
@@ -122,7 +245,7 @@ func (c *httpClient) Post(url, contentType string, body io.Reader) (*Response, e
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "http", "http", b)
+	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
 	if err != nil {
 		return &Response{}, fmt.Errorf("host returned error: %w", err)
 	}
@@ -184,7 +307,7 @@ func (c *httpClient) Put(url, contentType string, body io.Reader) (*Response, er
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "http", "http", b)
+	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
 	if err != nil {
 		return &Response{}, fmt.Errorf("host returned error: %w", err)
 	}
@@ -231,7 +354,7 @@ func (c *httpClient) Delete(url string) (*Response, error) {
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "http", "http", b)
+	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
 	if err != nil {
 		return &Response{}, fmt.Errorf("host returned error: %w", err)
 	}
@@ -296,7 +419,7 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "http", "http", b)
+	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
 	if err != nil {
 		return &Response{}, fmt.Errorf("host returned error: %w", err)
 	}
@@ -327,6 +450,10 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 	return response, nil
 }
 
+// NewRequest creates a new Request object to use with the Do method
+//
+// This function provides a way to create custom HTTP requests with
+// specific methods, URLs and body content.
 func NewRequest(method, urlString string, body io.Reader) (*Request, error) {
 	parsedURL, err := url.Parse(urlString)
 	if err != nil {

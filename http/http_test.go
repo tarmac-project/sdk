@@ -36,8 +36,8 @@ func TestClient(t *testing.T) {
 	// Configure the mock with a response
 	mock, err := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  "tarmac",
-		ExpectedCapability: "http",
-		ExpectedFunction:   "http",
+		ExpectedCapability: "httpclient",
+		ExpectedFunction:   "call",
 		Response:           createResponseFunc,
 	})
 
@@ -185,8 +185,8 @@ func TestClientTable(t *testing.T) {
 	// Create a mock that fails
 	failingMock, _ := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  "tarmac",
-		ExpectedCapability: "http",
-		ExpectedFunction:   "http",
+		ExpectedCapability: "httpclient",
+		ExpectedFunction:   "call",
 		Fail:               true,
 		Error:              fmt.Errorf("host call failed"),
 	})
@@ -213,8 +213,8 @@ func TestClientTable(t *testing.T) {
 			method:         "GET",
 			url:            "http://example.com/api",
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			expectStatus:   "OK",
 			expectCode:     200,
@@ -227,8 +227,8 @@ func TestClientTable(t *testing.T) {
 			contentType:    "application/json",
 			body:           strings.NewReader(`{"name":"test"}`),
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			expectStatus:   "OK",
 			expectCode:     200,
@@ -241,8 +241,8 @@ func TestClientTable(t *testing.T) {
 			contentType:    "application/json",
 			body:           strings.NewReader(`{"name":"updated"}`),
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			expectStatus:   "OK",
 			expectCode:     200,
@@ -253,8 +253,8 @@ func TestClientTable(t *testing.T) {
 			method:         "DELETE",
 			url:            "http://example.com/api/resource/123",
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			expectStatus:   "OK",
 			expectCode:     200,
@@ -267,8 +267,8 @@ func TestClientTable(t *testing.T) {
 			contentType:    "application/json",
 			body:           strings.NewReader(`{"status":"active"}`),
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			customHeaders: map[string]string{
 				"X-API-Key":    "test-key",
@@ -283,8 +283,8 @@ func TestClientTable(t *testing.T) {
 			method:         "GET",
 			url:            "http://example.com/api/nonexistent",
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createErrorResponseFunc,
 			expectStatus:   "Not Found",
 			expectCode:     404,
@@ -306,8 +306,8 @@ func TestClientTable(t *testing.T) {
 			method:         "GET",
 			url:            "http://example.com/api/headers",
 			mockNamespace:  "tarmac",
-			mockCapability: "http",
-			mockFunction:   "http",
+			mockCapability: "httpclient",
+			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			customHeaders: map[string]string{
 				"Authorization": "Bearer token123",
@@ -468,8 +468,8 @@ func BenchmarkHTTPClient(b *testing.B) {
 	// Configure the mock
 	mock, err := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  "tarmac",
-		ExpectedCapability: "http",
-		ExpectedFunction:   "http",
+		ExpectedCapability: "httpclient",
+		ExpectedFunction:   "call",
 		Response:           createResponseFunc,
 	})
 

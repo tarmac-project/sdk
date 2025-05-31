@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -192,21 +193,22 @@ func TestClientTable(t *testing.T) {
 	})
 
 	tests := []struct {
-		name            string
-		method          string
-		url             string
-		contentType     string
-		body            io.Reader
-		mockNamespace   string
-		mockCapability  string
-		mockFunction    string
-		mockResponse    func() []byte
-		customHeaders   map[string]string
-		expectStatus    string
-		expectCode      int
-		expectBody      string
-		expectErr       bool
-		expectErrString string
+		name             string
+		method           string
+		url              string
+		contentType      string
+		body             io.Reader
+		mockNamespace    string
+		mockCapability   string
+		mockFunction     string
+		mockResponse     func() []byte
+		customHeaders    map[string]string
+		expectStatus     string
+		expectCode       int
+		expectBody       string
+		expectErr        bool
+		expectErrString  string
+		payloadValidator func(payload []byte) error
 	}{
 		{
 			name:           "GET success",
@@ -271,8 +273,22 @@ func TestClientTable(t *testing.T) {
 			mockFunction:   "call",
 			mockResponse:   createResponseFunc,
 			customHeaders: map[string]string{
-				"X-API-Key":    "test-key",
-				"X-Request-ID": "test-request-id",
+				"X-API-Key": "test-key",
+			},
+			payloadValidator: func(payload []byte) error {
+				var req proto.HTTPClient
+				if err := pb.Unmarshal(payload, &req); err != nil {
+					return fmt.Errorf("could not unmarshal payload: %w", err)
+				}
+				h, ok := req.Headers["X-API-Key"]
+				if !ok {
+					return fmt.Errorf("header X-API-Key not found")
+				}
+				// Ensure the header has expected values
+				if len(h.Values) == 0 || h.Values[0] != "test-key" {
+					return fmt.Errorf("header %s: expected %q, got %v", "X-API-Key", "test-key", h.Values)
+				}
+				return nil
 			},
 			expectStatus: "OK",
 			expectCode:   200,
@@ -314,6 +330,27 @@ func TestClientTable(t *testing.T) {
 				"User-Agent":    "TarmacSDK/1.0",
 				"Accept":        "application/json",
 			},
+			payloadValidator: func(payload []byte) error {
+				var req proto.HTTPClient
+				if err := pb.Unmarshal(payload, &req); err != nil {
+					return fmt.Errorf("could not unmarshal payload: %w", err)
+				}
+				for k, v := range map[string]string{
+					"Authorization": "Bearer token123",
+					"User-Agent":    "TarmacSDK/1.0",
+					"Accept":        "application/json",
+				} {
+					h, ok := req.Headers[k]
+					if !ok {
+						return fmt.Errorf("header %s not found", k)
+					}
+					// Ensure the header has expected values
+					if len(h.Values) == 0 || h.Values[0] != v {
+						return fmt.Errorf("header %s: expected %q, got %v", k, v, h.Values)
+					}
+				}
+				return nil
+			},
 			expectStatus: "OK",
 			expectCode:   200,
 			expectBody:   `{"message":"success"}`,
@@ -332,6 +369,28 @@ func TestClientTable(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			var expectedBody []byte
+			if tc.body != nil {
+				data, _ := io.ReadAll(tc.body)
+				expectedBody = data
+				tc.body = bytes.NewReader(data)
+			}
+			baselineValidator := func(payload []byte) error {
+				var req proto.HTTPClient
+				if err := pb.Unmarshal(payload, &req); err != nil {
+					return fmt.Errorf("could not unmarshal payload: %w", err)
+				}
+				if req.Method != tc.method {
+					return fmt.Errorf("method mismatch: expected %s, got %s", tc.method, req.Method)
+				}
+				if req.Url != tc.url {
+					return fmt.Errorf("url mismatch: expected %s, got %s", tc.url, req.Url)
+				}
+				if !bytes.Equal(req.Body, expectedBody) {
+					return fmt.Errorf("body mismatch: expected %q, got %q", string(expectedBody), string(req.Body))
+				}
+				return nil
+			}
 			// Use the appropriate mock
 			var mockHostCall func(string, string, string, []byte) ([]byte, error)
 
@@ -339,12 +398,22 @@ func TestClientTable(t *testing.T) {
 				mockHostCall = failingMock.HostCall
 			} else {
 				// Configure a standard mock
-				mock, err := hostmock.New(hostmock.Config{
+				mockCfg := hostmock.Config{
 					ExpectedNamespace:  tc.mockNamespace,
 					ExpectedCapability: tc.mockCapability,
 					ExpectedFunction:   tc.mockFunction,
-					Response:           tc.mockResponse,
-				})
+					PayloadValidator: func(payload []byte) error {
+						if err := baselineValidator(payload); err != nil {
+							return err
+						}
+						if tc.payloadValidator != nil {
+							return tc.payloadValidator(payload)
+						}
+						return nil
+					},
+					Response: tc.mockResponse,
+				}
+				mock, err := hostmock.New(mockCfg)
 
 				if err != nil {
 					t.Fatalf("Failed to create mock: %v", err)

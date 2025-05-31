@@ -1,4 +1,4 @@
-.PHONY: all clean tests lint build format coverage
+.PHONY: all clean tests lint build format coverage benchmarks
 
 all: build tests lint
 
@@ -10,6 +10,11 @@ tests:
 	@if command -v go tool cover > /dev/null 2>&1; then \
 		go tool cover -html=coverage.out -o coverage.html; \
 	fi
+
+# Run benchmarks
+benchmarks:
+	@echo "Running benchmarks..."
+	go test -run=^$$ -bench=. -benchmem ./...
 
 # Build the package
 build:

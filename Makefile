@@ -1,4 +1,4 @@
-.PHONY: all clean tests lint build format
+.PHONY: all clean tests lint build format benchmarks
 
 all: build tests lint
 
@@ -9,6 +9,12 @@ tests:
 	@echo "Running tests for all components..."
 	@for dir in $(COMPONENTS); do \
 		$(MAKE) -C $$dir tests || exit 1; \
+	done
+
+benchmarks:
+	@echo "Running benchmarks for all components..."
+	@for dir in $(COMPONENTS); do \
+		$(MAKE) -C $$dir benchmarks || exit 1; \
 	done
 
 # Build all components

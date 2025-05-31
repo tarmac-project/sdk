@@ -110,7 +110,3 @@ make format
 # Lint code
 make lint
 ```
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).

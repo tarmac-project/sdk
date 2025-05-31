@@ -26,6 +26,8 @@ go.work.sum
 .env
 
 CLAUDE.md
+.claude
 
 # vim swap files
 *.swp
+

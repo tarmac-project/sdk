@@ -97,6 +97,7 @@ package http
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -151,6 +152,20 @@ type Request struct {
 	Header http.Header
 	Body   io.ReadCloser
 }
+
+var (
+	// ErrorInvalidURL is returned when the provided URL is invalid
+	ErrInvalidURL = errors.New("invalid URL provided")
+
+	// ErrorReadBody is returned when reading the request body fails
+	ErrReadBody = errors.New("failed to read request body")
+
+	// ErrorUnmarshalResponse is returned when unmarshalling the response fails
+	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
+
+	// ErrorHostCall is returned when the host call fails
+	ErrHostCall = errors.New("host call failed")
+)
 
 // New creates a new HTTP client with the provided configuration
 func New(config Config) (Client, error) {
@@ -394,6 +409,10 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 		if err != nil {
 			return &Response{}, fmt.Errorf("failed to read request body: %w", err)
 		}
+	}
+
+	if req.URL == nil {
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request

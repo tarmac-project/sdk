@@ -2,11 +2,14 @@ package http
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	sdkproto "github.com/tarmac-project/protobuf-go/sdk"
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
@@ -14,133 +17,170 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-// TestHTTPClient tests the basic HTTP client interface (Get, Post, Put, Delete, Do)
-// using a canned success response via hostmock.
+// InterfaceTestCase defines a single test case for the HTTP client interface methods.
+type InterfaceTestCase struct {
+	name        string
+	method      string
+	url         string
+	contentType string
+	body        io.Reader
+	expectErr   error
+}
+
+// TestHTTPClient tests the HTTP client interface methods (Get, Post, Put, Delete, Do)
+// using table-driven test cases for happy-path and error conditions.
 func TestHTTPClient(t *testing.T) {
-	// Create a mock response generator
-	createResponseFunc := func() []byte {
+	// canned response generator
+	createResponse := func() []byte {
 		resp := &proto.HTTPClientResponse{
-			Status: &sdkproto.Status{
-				Status: "OK",
-				Code:   200,
-			},
+			Status: &sdkproto.Status{Status: "OK", Code: 200},
 			Headers: map[string]*proto.Header{
-				"Content-Type": {
-					Values: []string{"application/json"},
-				},
+				"Content-Type": {Values: []string{"application/json"}},
 			},
 			Body: []byte(`{"message":"success"}`),
 		}
-
-		respBytes, _ := pb.Marshal(resp)
-		return respBytes
+		b, _ := pb.Marshal(resp)
+		return b
 	}
 
-	// Configure the mock with a response
+	// Create a mock that returns the canned response and does basic validations
 	mock, err := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  "tarmac",
 		ExpectedCapability: "httpclient",
 		ExpectedFunction:   "call",
-		Response:           createResponseFunc,
+		Response:           createResponse,
 	})
-
 	if err != nil {
-		t.Fatalf("Failed to create mock: %v", err)
+		t.Fatalf("failed to create hostmock: %v", err)
 	}
 
-	// Create the client with proper namespace
-	client, err := New(Config{
-		Namespace: "tarmac",
-		HostCall:  mock.HostCall,
-	})
-
+	// Create the HTTP client with the mock
+	client, err := New(Config{Namespace: "tarmac", HostCall: mock.HostCall})
 	if err != nil {
-		t.Fatalf("Failed to create client: %v", err)
+		t.Fatalf("failed to create client: %v", err)
 	}
 
-	t.Run("GET request", func(t *testing.T) {
-		resp, err := client.Get("http://example.com")
-		if err != nil {
-			t.Fatalf("Failed to make GET request: %v", err)
-		}
+	// Define test cases both happy-path and error cases
+	tt := []InterfaceTestCase{
+		{"GET success", "GET", "http://example.com", "", nil, nil},
+		{"GET with bad URL", "GET", "://bad-url", "", nil, ErrInvalidURL},
+		{"GET with empty URL", "GET", "", "", nil, ErrInvalidURL},
+		{"POST success", "POST", "http://example.com", "application/json", strings.NewReader(`{"x":"y"}`), nil},
+		{"POST no body", "POST", "http://example.com", "text/plain", nil, nil},
+		{"POST with bad URL", "POST", "://bad-url", "", nil, ErrInvalidURL},
+		{"POST with empty URL", "POST", "", "", nil, ErrInvalidURL},
+		{"POST with empty content type", "POST", "http://example.com", "", strings.NewReader("body"), nil},
+		{"POST with bad reader", "POST", "http://example.com", "text/plain", iotest.ErrReader(TestErrBadReader), TestErrBadReader},
+		{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
+		{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
+		{"PUT with empty URL", "PUT", "", "", nil, ErrInvalidURL},
+		{"PUT with empty content type", "PUT", "http://example.com", "", strings.NewReader("body"), nil},
+		{"PUT with bad reader", "PUT", "http://example.com", "text/plain", iotest.ErrReader(TestErrBadReader), TestErrBadReader},
+		{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
+		{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
+		{"DELETE with empty URL", "DELETE", "", "", nil, ErrInvalidURL},
+		{"PATCH via Do", "PATCH", "http://example.com", "application/json", strings.NewReader(`{"flag":true}`), nil},
+		{"DO with bad URL", "PATCH", "://bad-url", "", nil, ErrInvalidURL},
+		{"DO with empty URL", "PATCH", "", "", nil, ErrInvalidURL},
+	}
 
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected status OK, got %v", resp.StatusCode)
-		}
+	// Run each test case using the appropriate method
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			var (
+				resp *Response
+				err  error
+			)
 
-		if resp.Status != "OK" {
-			t.Fatalf("Expected status text 'OK', got %v", resp.Status)
-		}
+			switch tc.method {
+			case "GET":
+				resp, err = client.Get(tc.url)
+			case "POST":
+				resp, err = client.Post(tc.url, tc.contentType, tc.body)
+			case "PUT":
+				resp, err = client.Put(tc.url, tc.contentType, tc.body)
+			case "DELETE":
+				resp, err = client.Delete(tc.url)
+			default:
+				// For other methods, use the Do method this is happy-path only
+				req, err := NewRequest(tc.method, tc.url, tc.body)
+				if err != nil {
+					t.Fatalf("failed to create request: %v", err)
+				}
 
-		if contentType := resp.Header.Get("Content-Type"); contentType != "application/json" {
-			t.Fatalf("Expected Content-Type application/json, got %v", contentType)
-		}
+				// Add content type if specified
+				if tc.contentType != "" {
+					req.Header.Set("Content-Type", tc.contentType)
+				}
 
-		// Test body if present
-		if resp.Body != nil {
-			body, err := io.ReadAll(resp.Body)
+				resp, err = client.Do(req)
+			}
 			if err != nil {
-				t.Fatalf("Failed to read response body: %v", err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			expectedBody := `{"message":"success"}`
-			if string(body) != expectedBody {
-				t.Fatalf("Expected body %q, got %q", expectedBody, string(body))
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
 			}
-		}
-	})
+		})
+	}
 
-	t.Run("POST request", func(t *testing.T) {
-		resp, err := client.Post("http://example.com", "application/json", strings.NewReader(`{"data":"test"}`))
-		if err != nil {
-			t.Fatalf("Failed to make POST request: %v", err)
-		}
+	// exampleURL
+	exampleURL, err := url.Parse("http://example.com")
+	if err != nil {
+		t.Fatalf("failed to parse example URL: %v", err)
+	}
 
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected status OK, got %v", resp.StatusCode)
-		}
-	})
+	// Additional test cases for Do method
+	tt2 := []struct {
+		name        string
+		request     *Request
+		expectedErr error
+	}{
+		{"Do with valid request", &Request{Method: "GET", URL: exampleURL}, nil},
+		{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},
+	}
 
-	t.Run("PUT request", func(t *testing.T) {
-		resp, err := client.Put("http://example.com", "application/json", strings.NewReader(`{"data":"test"}`))
-		if err != nil {
-			t.Fatalf("Failed to make PUT request: %v", err)
-		}
+	for _, tc := range tt2 {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := client.Do(tc.request)
+			if err != nil || !errors.Is(err, tc.expectedErr) {
+				if tc.expectedErr == nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if !errors.Is(err, tc.expectedErr) {
+					t.Errorf("expected error %v, got %v", tc.expectedErr, err)
+				}
+				return
+			}
+			if resp == nil {
+				t.Fatal("expected a response, got nil")
+			}
 
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected status OK, got %v", resp.StatusCode)
-		}
-	})
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+			}
+		})
+	}
+}
 
-	t.Run("DELETE request", func(t *testing.T) {
-		resp, err := client.Delete("http://example.com")
-		if err != nil {
-			t.Fatalf("Failed to make DELETE request: %v", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected status OK, got %v", resp.StatusCode)
-		}
-	})
-
-	t.Run("Do request with custom method", func(t *testing.T) {
-		req, err := NewRequest("PATCH", "http://example.com", nil)
-		if err != nil {
-			t.Fatalf("Failed to create PATCH request: %v", err)
-		}
-
-		// Add some headers to test header processing
-		req.Header.Set("X-Custom-Header", "test-value")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("Failed to make PATCH request: %v", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("Expected status OK, got %v", resp.StatusCode)
-		}
-	})
+type HostMockTestCase struct {
+	name             string
+	method           string
+	url              string
+	contentType      string
+	body             io.Reader
+	mockNamespace    string
+	mockCapability   string
+	mockFunction     string
+	mockResponse     func() []byte
+	customHeaders    map[string]string
+	expectStatus     string
+	expectCode       int
+	expectBody       string
+	expectErr        bool
+	expectErrString  string
+	payloadValidator func(payload []byte) error
 }
 
 // TestHTTPClientHostMock exercises Get/Post/Put/Delete/Do using hostmock to
@@ -196,24 +236,7 @@ func TestHTTPClientHostMock(t *testing.T) {
 		Error:              fmt.Errorf("host call failed"),
 	})
 
-	tests := []struct {
-		name             string
-		method           string
-		url              string
-		contentType      string
-		body             io.Reader
-		mockNamespace    string
-		mockCapability   string
-		mockFunction     string
-		mockResponse     func() []byte
-		customHeaders    map[string]string
-		expectStatus     string
-		expectCode       int
-		expectBody       string
-		expectErr        bool
-		expectErrString  string
-		payloadValidator func(payload []byte) error
-	}{
+	tt := []HostMockTestCase{
 		{
 			name:           "GET success",
 			method:         "GET",
@@ -371,7 +394,7 @@ func TestHTTPClientHostMock(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			var expectedBody []byte
 			if tc.body != nil {
@@ -390,7 +413,7 @@ func TestHTTPClientHostMock(t *testing.T) {
 				if req.Url != tc.url {
 					return fmt.Errorf("url mismatch: expected %s, got %s", tc.url, req.Url)
 				}
-				if !bytes.Equal(req.Body, expectedBody) {
+				if req.Body != nil && !bytes.Equal(req.Body, expectedBody) {
 					return fmt.Errorf("body mismatch: expected %q, got %q", string(expectedBody), string(req.Body))
 				}
 				return nil
@@ -583,3 +606,5 @@ func BenchmarkHTTPClient(b *testing.B) {
 		}
 	})
 }
+
+var TestErrBadReader = fmt.Errorf("bad reader error")

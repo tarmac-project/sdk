@@ -14,9 +14,9 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-// TestClient tests the basic HTTP client interface (Get, Post, Put, Delete, Do)
+// TestHTTPClient tests the basic HTTP client interface (Get, Post, Put, Delete, Do)
 // using a canned success response via hostmock.
-func TestClient(t *testing.T) {
+func TestHTTPClient(t *testing.T) {
 	// Create a mock response generator
 	createResponseFunc := func() []byte {
 		resp := &proto.HTTPClientResponse{
@@ -143,9 +143,9 @@ func TestClient(t *testing.T) {
 	})
 }
 
-// TestClientHostCall exercises Get/Post/Put/Delete/Do using hostmock to
+// TestHTTPClientHostMock exercises Get/Post/Put/Delete/Do using hostmock to
 // validate protobuf payloads and simulate various host-call outcomes.
-func TestClientHostCall(t *testing.T) {
+func TestHTTPClientHostMock(t *testing.T) {
 	// Create a mock response generator
 	createResponseFunc := func() []byte {
 		resp := &proto.HTTPClientResponse{

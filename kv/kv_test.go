@@ -21,8 +21,8 @@ type InterfaceTestCase struct {
 	ExpectedErrors map[string]error // Map of operation names to expected errors
 }
 
-// TestKV tests the functionality of the KV interface implementation
-func TestKV(t *testing.T) {
+// TestKVClient tests the functionality of the KV client interface implementation
+func TestKVClient(t *testing.T) {
 	// Initialize a new KV store with default configuration
 	kv, err := New(Config{})
 	if err != nil {
@@ -119,8 +119,8 @@ func TestKV(t *testing.T) {
 	})
 }
 
-// TestKVHostCall exercises Get, Set, Delete, and Keys using a hostmock to simulate waPC host calls.
-func TestKVHostCall(t *testing.T) {
+// TestKVClientHostMock exercises Get, Set, Delete, and Keys using a hostmock to simulate waPC host calls.
+func TestKVClientHostMock(t *testing.T) {
 	const namespace = "testing"
 	const capability = "kvstore"
 
@@ -455,9 +455,9 @@ func TestKVHostCall(t *testing.T) {
 	})
 }
 
-// BenchmarkKV provides basic happy-path benchmarks for Get, Set, Delete, and Keys
+// BenchmarkKVClient provides basic happy-path benchmarks for Get, Set, Delete, and Keys
 // using pre-canned hostmock responses.
-func BenchmarkKV(b *testing.B) {
+func BenchmarkKVClient(b *testing.B) {
 	const namespace = "benchmark"
 	const capability = "kvstore"
 

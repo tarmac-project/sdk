@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -15,6 +14,8 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	"github.com/tarmac-project/sdk/hostmock"
 	pb "google.golang.org/protobuf/proto"
+
+	"github.com/madflojo/testlazy/things/testurl"
 )
 
 // InterfaceTestCase defines a single test case for the HTTP client interface methods.
@@ -125,19 +126,16 @@ func TestHTTPClient(t *testing.T) {
 		})
 	}
 
-	// exampleURL
-	exampleURL, err := url.Parse("http://example.com")
-	if err != nil {
-		t.Fatalf("failed to parse example URL: %v", err)
-	}
-
 	// Additional test cases for Do method
 	tt2 := []struct {
 		name        string
 		request     *Request
 		expectedErr error
 	}{
-		{"Do with valid request", &Request{Method: "GET", URL: exampleURL}, nil},
+		{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
+		{"Do with no shceme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, ErrInvalidURL},
+		{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, ErrInvalidURL},
+		{"Do with no host URL", &Request{Method: "GET", URL: testurl.URLNoHost()}, ErrInvalidURL},
 		{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},
 	}
 

@@ -67,6 +67,36 @@ func TestHostMock(t *testing.T) {
 			wantErr:    ErrMockError,
 		},
 		{
+			name: "Default fail error",
+			cfg: Config{
+				ExpectedNamespace:  "test",
+				ExpectedCapability: "test",
+				ExpectedFunction:   "test",
+				Fail:               true, // no custom Error provided
+			},
+			namespace:  "test",
+			capability: "test",
+			function:   "test",
+			payload:    []byte("whatever"),
+			want:       nil,
+			wantErr:    ErrOperationFailed,
+		},
+		{
+			name: "Nil response returns nil",
+			cfg: Config{
+				ExpectedNamespace:  "test",
+				ExpectedCapability: "test",
+				ExpectedFunction:   "test",
+				// no Response and no validator
+			},
+			namespace:  "test",
+			capability: "test",
+			function:   "test",
+			payload:    []byte("ok"),
+			want:       nil,
+			wantErr:    nil,
+		},
+		{
 			name: "Invalid Payload Format",
 			cfg: Config{
 				ExpectedNamespace:  "test",

@@ -34,3 +34,4 @@ CLAUDE.md
 # vim swap files
 *.swp
 
+.workdir

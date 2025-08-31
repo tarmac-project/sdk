@@ -102,7 +102,7 @@ To build and test the SDK, use the provided Makefiles:
 make build
 
 # Run tests for all components
-make test
+make tests
 
 # Format code
 make format

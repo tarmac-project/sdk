@@ -96,12 +96,22 @@ func (m *Mock) HostCall(namespace, capability, function string, payload []byte) 
 
 	// Validate namespace
 	if m.ExpectedNamespace != namespace {
-		return nil, fmt.Errorf("%w: expected namespace %s, got %s", ErrUnexpectedNamespace, m.ExpectedNamespace, namespace)
+		return nil, fmt.Errorf(
+			"%w: expected namespace %s, got %s",
+			ErrUnexpectedNamespace,
+			m.ExpectedNamespace,
+			namespace,
+		)
 	}
 
 	// Validate capability
 	if m.ExpectedCapability != capability {
-		return nil, fmt.Errorf("%w: expected capability %s, got %s", ErrUnexpectedCapability, m.ExpectedCapability, capability)
+		return nil, fmt.Errorf(
+			"%w: expected capability %s, got %s",
+			ErrUnexpectedCapability,
+			m.ExpectedCapability,
+			capability,
+		)
 	}
 
 	// Validate function
@@ -124,4 +134,3 @@ func (m *Mock) HostCall(namespace, capability, function string, payload []byte) 
 	// Default to no response
 	return nil, nil
 }
-

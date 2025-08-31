@@ -104,6 +104,7 @@ import (
 	"net/url"
 
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
+	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
 	pb "google.golang.org/protobuf/proto"
 )
@@ -122,6 +123,10 @@ type Config struct {
 	// Namespace controls the function namespace to use for host callbacks
 	// The default value is "default" which is the global namespace
 	Namespace string
+
+	// SDKConfig supplies shared SDK-level configuration such as the
+	// default Namespace. If Namespace above is set, it takes precedence.
+	SDKConfig sdk.RuntimeConfig
 
 	// InsecureSkipVerify controls whether the client verifies the
 	// server's certificate chain and host name
@@ -171,7 +176,11 @@ var (
 func New(config Config) (Client, error) {
 	// Set default namespace if not provided
 	if config.Namespace == "" {
-		config.Namespace = "default"
+		if config.SDKConfig.Namespace != "" {
+			config.Namespace = config.SDKConfig.Namespace
+		} else {
+			config.Namespace = "default"
+		}
 	}
 
 	// Use the provided host call function or default to waPC.HostCall

@@ -11,6 +11,8 @@ tests:
 		$(MAKE) -C $$dir tests || exit 1; \
 	done
 
+
+
 benchmarks:
 	@echo "Running benchmarks for all components..."
 	@for dir in $(COMPONENTS); do \
@@ -28,6 +30,8 @@ build:
 format:
 	@echo "Formatting code..."
 	@gofmt -s -w .
+	@goimports -w .
+	@golines -w . -m 120 .
 	@for dir in $(COMPONENTS); do \
 		$(MAKE) -C $$dir format || exit 1; \
 	done

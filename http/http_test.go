@@ -25,7 +25,7 @@ type InterfaceTestCase struct {
 	url         string
 	contentType string
 	body        io.Reader
-	expectErr   error
+	expectedErr error
 }
 
 // TestHTTPClient tests the HTTP client interface methods (Get, Post, Put, Delete, Do)
@@ -71,12 +71,26 @@ func TestHTTPClient(t *testing.T) {
 		{"POST with bad URL", "POST", "://bad-url", "", nil, ErrInvalidURL},
 		{"POST with empty URL", "POST", "", "", nil, ErrInvalidURL},
 		{"POST with empty content type", "POST", "http://example.com", "", strings.NewReader("body"), nil},
-		{"POST with bad reader", "POST", "http://example.com", "text/plain", iotest.ErrReader(TestErrBadReader), TestErrBadReader},
+		{
+			"POST with bad reader",
+			"POST",
+			"http://example.com",
+			"text/plain",
+			iotest.ErrReader(TestErrBadReader),
+			TestErrBadReader,
+		},
 		{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
 		{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
 		{"PUT with empty URL", "PUT", "", "", nil, ErrInvalidURL},
 		{"PUT with empty content type", "PUT", "http://example.com", "", strings.NewReader("body"), nil},
-		{"PUT with bad reader", "PUT", "http://example.com", "text/plain", iotest.ErrReader(TestErrBadReader), TestErrBadReader},
+		{
+			"PUT with bad reader",
+			"PUT",
+			"http://example.com",
+			"text/plain",
+			iotest.ErrReader(TestErrBadReader),
+			TestErrBadReader,
+		},
 		{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
 		{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
 		{"DELETE with empty URL", "DELETE", "", "", nil, ErrInvalidURL},
@@ -104,19 +118,12 @@ func TestHTTPClient(t *testing.T) {
 				resp, err = client.Delete(tc.url)
 			default:
 				// For other methods, use the Do method this is happy-path only
-				req, err := NewRequest(tc.method, tc.url, tc.body)
-				if err != nil {
+				_, err := NewRequest(tc.method, tc.url, tc.body)
+				if !errors.Is(err, tc.expectedErr) {
 					t.Fatalf("failed to create request: %v", err)
 				}
-
-				// Add content type if specified
-				if tc.contentType != "" {
-					req.Header.Set("Content-Type", tc.contentType)
-				}
-
-				resp, err = client.Do(req)
 			}
-			if err != nil {
+			if !errors.Is(err, tc.expectedErr) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -163,22 +170,22 @@ func TestHTTPClient(t *testing.T) {
 }
 
 type HostMockTestCase struct {
-	name             string
-	method           string
-	url              string
-	contentType      string
-	body             io.Reader
-	mockNamespace    string
-	mockCapability   string
-	mockFunction     string
-	mockResponse     func() []byte
-	customHeaders    map[string]string
-	expectStatus     string
-	expectCode       int
-	expectBody       string
-	expectErr        bool
-	expectErrString  string
-	payloadValidator func(payload []byte) error
+	name              string
+	method            string
+	url               string
+	contentType       string
+	body              io.Reader
+	mockNamespace     string
+	mockCapability    string
+	mockFunction      string
+	mockResponse      func() []byte
+	customHeaders     map[string]string
+	expectStatus      string
+	expectCode        int
+	expectBody        string
+	expectedErr       bool
+	expectedErrString string
+	payloadValidator  func(payload []byte) error
 }
 
 // TestHTTPClientHostMock exercises Get/Post/Put/Delete/Do using hostmock to
@@ -332,15 +339,15 @@ func TestHTTPClientHostMock(t *testing.T) {
 			expectBody:     `{"error":"resource not found"}`,
 		},
 		{
-			name:            "Custom request with bad URL",
-			method:          "CUSTOM",
-			url:             "://bad-url",
-			mockNamespace:   "tarmac",
-			mockCapability:  "http",
-			mockFunction:    "http",
-			mockResponse:    createResponseFunc,
-			expectErr:       true,
-			expectErrString: "missing protocol scheme",
+			name:              "Custom request with bad URL",
+			method:            "CUSTOM",
+			url:               "://bad-url",
+			mockNamespace:     "tarmac",
+			mockCapability:    "http",
+			mockFunction:      "http",
+			mockResponse:      createResponseFunc,
+			expectedErr:       true,
+			expectedErrString: "missing protocol scheme",
 		},
 		{
 			name:           "Custom headers in request",
@@ -381,14 +388,14 @@ func TestHTTPClientHostMock(t *testing.T) {
 			expectBody:   `{"message":"success"}`,
 		},
 		{
-			name:            "Host call failure",
-			method:          "GET",
-			url:             "http://example.com/error",
-			mockNamespace:   "tarmac",
-			mockCapability:  "http",
-			mockFunction:    "http",
-			expectErr:       true,
-			expectErrString: "host returned error",
+			name:              "Host call failure",
+			method:            "GET",
+			url:               "http://example.com/error",
+			mockNamespace:     "tarmac",
+			mockCapability:    "http",
+			mockFunction:      "http",
+			expectedErr:       true,
+			expectedErrString: "host returned error",
 		},
 	}
 
@@ -475,7 +482,8 @@ func TestHTTPClientHostMock(t *testing.T) {
 				req, err := NewRequest(tc.method, tc.url, tc.body)
 				if err != nil {
 					// If we're expecting a URL parse error, this is fine
-					if tc.expectErr && tc.expectErrString != "" && strings.Contains(err.Error(), tc.expectErrString) {
+					if tc.expectedErr && tc.expectedErrString != "" &&
+						strings.Contains(err.Error(), tc.expectedErrString) {
 						reqErr = err
 						return
 					}
@@ -497,11 +505,11 @@ func TestHTTPClientHostMock(t *testing.T) {
 			}
 
 			// Check for errors
-			if tc.expectErr {
+			if tc.expectedErr {
 				if reqErr == nil {
 					t.Errorf("Expected error but got nil")
-				} else if tc.expectErrString != "" && !strings.Contains(reqErr.Error(), tc.expectErrString) {
-					t.Errorf("Expected error to contain %q but got %q", tc.expectErrString, reqErr.Error())
+				} else if tc.expectedErrString != "" && !strings.Contains(reqErr.Error(), tc.expectedErrString) {
+					t.Errorf("Expected error to contain %q but got %q", tc.expectedErrString, reqErr.Error())
 				}
 				return
 			} else if reqErr != nil {

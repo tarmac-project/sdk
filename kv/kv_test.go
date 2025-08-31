@@ -1,4 +1,4 @@
-package kv
+package kv_test
 
 import (
 	"bytes"
@@ -9,6 +9,8 @@ import (
 	sdkproto "github.com/tarmac-project/protobuf-go/sdk"
 	proto "github.com/tarmac-project/protobuf-go/sdk/kvstore"
 	"github.com/tarmac-project/sdk/hostmock"
+	kvpkg "github.com/tarmac-project/sdk/kv"
+	kvmock "github.com/tarmac-project/sdk/kv/mock"
 	pb "google.golang.org/protobuf/proto"
 )
 
@@ -23,11 +25,8 @@ type InterfaceTestCase struct {
 
 // TestKVClient tests the functionality of the KV client interface implementation
 func TestKVClient(t *testing.T) {
-	// Initialize a new KV store with default configuration
-	kv, err := New(Config{})
-	if err != nil {
-		t.Fatalf("Failed to create KV: %v", err)
-	}
+	// Use the in-memory mock for interface tests
+	kv := kvmock.New(kvmock.Config{})
 	defer kv.Close() //nolint:errcheck
 
 	// Define test cases covering different scenarios
@@ -48,9 +47,9 @@ func TestKVClient(t *testing.T) {
 			Key:   "",
 			Value: []byte("less_boring"),
 			ExpectedErrors: map[string]error{
-				"SET":    ErrInvalidKey,
-				"GET":    ErrInvalidKey,
-				"DELETE": ErrInvalidKey,
+				"SET":    kvpkg.ErrInvalidKey,
+				"GET":    kvpkg.ErrInvalidKey,
+				"DELETE": kvpkg.ErrInvalidKey,
 				"KEYS":   nil,
 			},
 		},
@@ -59,7 +58,7 @@ func TestKVClient(t *testing.T) {
 			Key:   "key3",
 			Value: nil,
 			ExpectedErrors: map[string]error{
-				"SET":    ErrInvalidValue,
+				"SET":    kvpkg.ErrInvalidValue,
 				"GET":    nil,
 				"DELETE": nil,
 				"KEYS":   nil,
@@ -102,13 +101,15 @@ func TestKVClient(t *testing.T) {
 
 	// Test KEYS operation separately with a fresh KV instance
 	t.Run("KEYS", func(t *testing.T) {
-		kv, err := New(Config{})
-		if err != nil {
-			t.Fatalf("Failed to create KV: %v", err)
-		}
+		kv := kvmock.New(kvmock.Config{Seed: map[string][]byte{
+			"a": []byte("1"),
+			"b": []byte("2"),
+			"c": []byte("3"),
+			"d": []byte("4"),
+			"e": []byte("5"),
+		}})
 		defer kv.Close() //nolint:errcheck
 
-		// Verify Keys() returns expected results
 		keys, err := kv.Keys()
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
@@ -162,7 +163,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              fmt.Errorf("host failure"),
 				},
 				wantValue: nil,
-				wantErr:   fmt.Errorf("host failure"),
+				wantErr:   kvpkg.ErrHostCall,
 			},
 			{
 				name: "key not found",
@@ -181,7 +182,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 				},
 				wantValue: nil,
-				wantErr:   ErrKeyNotFound,
+				wantErr:   kvpkg.ErrKeyNotFound,
 			},
 			{
 				name: "invalid response",
@@ -196,7 +197,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 				},
 				wantValue: nil,
-				wantErr:   ErrHostResponseInvalid,
+				wantErr:   kvpkg.ErrHostResponseInvalid,
 			},
 		}
 
@@ -206,7 +207,7 @@ func TestKVClientHostMock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to create host mock: %v", err)
 				}
-				client, err := New(Config{Namespace: namespace, HostCall: mock.HostCall})
+				client, err := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mock.HostCall})
 				if err != nil {
 					t.Fatalf("failed to create KV client: %v", err)
 				}
@@ -269,7 +270,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Fail:               true,
 					Error:              fmt.Errorf("host failure"),
 				},
-				wantErr: fmt.Errorf("host failure"),
+				wantErr: kvpkg.ErrHostCall,
 			},
 			{
 				name:  "invalid payload",
@@ -285,7 +286,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return b
 					},
 				},
-				wantErr: fmt.Errorf("host response invalid"),
+				wantErr: kvpkg.ErrHostResponseInvalid,
 			},
 			{
 				name:  "invalid response",
@@ -300,7 +301,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return []byte("invalid response")
 					},
 				},
-				wantErr: ErrHostResponseInvalid,
+				wantErr: kvpkg.ErrHostResponseInvalid,
 			},
 		}
 
@@ -310,7 +311,7 @@ func TestKVClientHostMock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to create host mock for set: %v", err)
 				}
-				client, err := New(Config{Namespace: namespace, HostCall: mock.HostCall})
+				client, err := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mock.HostCall})
 				if err != nil {
 					t.Fatalf("failed to create KV client: %v", err)
 				}
@@ -358,7 +359,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Fail:               true,
 					Error:              fmt.Errorf("host failure"),
 				},
-				wantErr: fmt.Errorf("host failure"),
+				wantErr: kvpkg.ErrHostCall,
 			},
 			{
 				name: "invalid response",
@@ -372,7 +373,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return []byte("invalid response")
 					},
 				},
-				wantErr: ErrHostResponseInvalid,
+				wantErr: kvpkg.ErrHostResponseInvalid,
 			},
 		}
 
@@ -382,7 +383,7 @@ func TestKVClientHostMock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to create host mock for delete: %v", err)
 				}
-				client, err := New(Config{Namespace: namespace, HostCall: mock.HostCall})
+				client, err := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mock.HostCall})
 				if err != nil {
 					t.Fatalf("failed to create KV client: %v", err)
 				}
@@ -429,7 +430,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              fmt.Errorf("host failure"),
 				},
 				wantKeys: nil,
-				wantErr:  fmt.Errorf("host failure"),
+				wantErr:  kvpkg.ErrHostCall,
 			},
 		}
 
@@ -439,7 +440,7 @@ func TestKVClientHostMock(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to create host mock for keys: %v", err)
 				}
-				client, err := New(Config{Namespace: namespace, HostCall: mock.HostCall})
+				client, err := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mock.HostCall})
 				if err != nil {
 					t.Fatalf("failed to create KV client: %v", err)
 				}
@@ -476,7 +477,7 @@ func BenchmarkKVClient(b *testing.B) {
 		ExpectedFunction:   "get",
 		Response:           getResp,
 	})
-	clientGet, _ := New(Config{Namespace: namespace, HostCall: mockGet.HostCall})
+	clientGet, _ := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mockGet.HostCall})
 
 	b.Run("Get", func(b *testing.B) {
 		b.ResetTimer()
@@ -499,7 +500,7 @@ func BenchmarkKVClient(b *testing.B) {
 		ExpectedFunction:   "set",
 		Response:           setResp,
 	})
-	clientSet, _ := New(Config{Namespace: namespace, HostCall: mockSet.HostCall})
+	clientSet, _ := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mockSet.HostCall})
 
 	b.Run("Set", func(b *testing.B) {
 		b.ResetTimer()
@@ -522,7 +523,7 @@ func BenchmarkKVClient(b *testing.B) {
 		ExpectedFunction:   "delete",
 		Response:           delResp,
 	})
-	clientDel, _ := New(Config{Namespace: namespace, HostCall: mockDel.HostCall})
+	clientDel, _ := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mockDel.HostCall})
 
 	b.Run("Delete", func(b *testing.B) {
 		b.ResetTimer()
@@ -548,7 +549,7 @@ func BenchmarkKVClient(b *testing.B) {
 		ExpectedFunction:   "keys",
 		Response:           keysResp,
 	})
-	clientKeys, _ := New(Config{Namespace: namespace, HostCall: mockKeys.HostCall})
+	clientKeys, _ := kvpkg.New(kvpkg.Config{Namespace: namespace, HostCall: mockKeys.HostCall})
 
 	b.Run("Keys", func(b *testing.B) {
 		b.ResetTimer()

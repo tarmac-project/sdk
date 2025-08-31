@@ -229,7 +229,11 @@ func TestMockClient(t *testing.T) {
 			Body:       []byte(`{"updated":true}`),
 		})
 
-		resp, err := client.Put("https://example.com/api/123", "application/json", strings.NewReader(`{"name":"updated"}`))
+		resp, err := client.Put(
+			"https://example.com/api/123",
+			"application/json",
+			strings.NewReader(`{"name":"updated"}`),
+		)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

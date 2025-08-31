@@ -11,6 +11,8 @@ tests:
 		go tool cover -html=coverage.out -o coverage.html; \
 	fi
 
+
+
 # Run benchmarks
 benchmarks:
 	@echo "Running benchmarks..."
@@ -25,6 +27,8 @@ build:
 format:
 	@echo "Formatting code..."
 	gofmt -s -w .
+	goimports -w .
+	golines -w . -m 120 .
 
 # Lint code
 lint:

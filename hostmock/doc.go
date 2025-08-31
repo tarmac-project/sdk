@@ -23,19 +23,19 @@ hostmock when you need to assert the waPC payloads or validate capability routin
 
 Quick start
 
-  m, _ := hostmock.New(hostmock.Config{
-    ExpectedNamespace:  "tarmac",
-    ExpectedCapability: "httpclient",
-    ExpectedFunction:   "call",
-    PayloadValidator: func(p []byte) error {
-      // Unmarshal and assert fields here
-      return nil
-    },
-    Response: func() []byte { return []byte("ok") },
-  })
+	m, _ := hostmock.New(hostmock.Config{
+	  ExpectedNamespace:  "tarmac",
+	  ExpectedCapability: "httpclient",
+	  ExpectedFunction:   "call",
+	  PayloadValidator: func(p []byte) error {
+	    // Unmarshal and assert fields here
+	    return nil
+	  },
+	  Response: func() []byte { return []byte("ok") },
+	})
 
-  // Inject into a component under test
-  resp, err := m.HostCall("tarmac", "httpclient", "call", []byte("payload"))
+	// Inject into a component under test
+	resp, err := m.HostCall("tarmac", "httpclient", "call", []byte("payload"))
 
 Behavior
 
@@ -52,4 +52,3 @@ Tips
   - Prefer component mocks unless you truly need wire-level checks.
 */
 package hostmock
-

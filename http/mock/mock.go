@@ -201,11 +201,13 @@ func (m *MockClient) Do(req *sdk.Request) (*sdk.Response, error) {
     return toSDKResponse(resp), nil
 }
 
+// ResponseBuilder helps configure a response for a specific method and URL.
 type ResponseBuilder struct {
 	client *MockClient
 	key    string
 }
 
+// Return sets the response for the configured method and URL.
 func (r *ResponseBuilder) Return(response *Response) *MockClient {
 	// Ensure header is initialized
 	if response.Header == nil {
@@ -216,6 +218,7 @@ func (r *ResponseBuilder) Return(response *Response) *MockClient {
 	return r.client
 }
 
+// ReturnError configures an error response for the configured method and URL.
 func (r *ResponseBuilder) ReturnError(err error) *MockClient {
 	r.client.responses[r.key] = &Response{
 		Error: err,

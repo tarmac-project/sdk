@@ -61,12 +61,22 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// KV describes the key-value operations supported by the client.
+// Implementations should treat the zero-value as unusable; use New to
+// construct a working client.
 type KV interface {
-	Get(key string) ([]byte, error)
-	Set(key string, value []byte) error
-	Delete(key string) error
-	Keys() ([]string, error)
-	Close() error
+    // Get returns the value for key or an error. If the key is not found,
+    // ErrKeyNotFound is returned.
+    Get(key string) ([]byte, error)
+    // Set stores value under key. It returns an error for invalid inputs
+    // or host call failures.
+    Set(key string, value []byte) error
+    // Delete removes key. Deleting a non-existent key does not error.
+    Delete(key string) error
+    // Keys returns a snapshot of keys in the store.
+    Keys() ([]string, error)
+    // Close releases resources held by the client.
+    Close() error
 }
 
 // kvClient implements the KV interface via waPC host calls.
@@ -89,11 +99,16 @@ type Config struct {
 }
 
 var (
-	ErrInvalidKey          = errors.New("key is invalid")
-	ErrInvalidValue        = errors.New("value is invalid")
-	ErrKeyNotFound         = errors.New("key not found in store")
-	ErrHostResponseInvalid = errors.New("host response is invalid or unexpected")
-	ErrHostCall            = errors.New("host call failed")
+    // ErrInvalidKey indicates that the provided key is empty or otherwise invalid.
+    ErrInvalidKey = errors.New("key is invalid")
+    // ErrInvalidValue indicates that the provided value is nil or invalid.
+    ErrInvalidValue = errors.New("value is invalid")
+    // ErrKeyNotFound indicates that the requested key does not exist.
+    ErrKeyNotFound = errors.New("key not found in store")
+    // ErrHostResponseInvalid indicates that the host returned an invalid or unexpected response.
+    ErrHostResponseInvalid = errors.New("host response is invalid or unexpected")
+    // ErrHostCall indicates that the waPC host call failed.
+    ErrHostCall = errors.New("host call failed")
 )
 
 // New returns a KV client configured to communicate with the host via waPC.
@@ -112,10 +127,12 @@ func New(config Config) (KV, error) {
 	return &kvClient{namespace: config.Namespace, hostCall: hostFn}, nil
 }
 
+// Close releases resources associated with the client. It is a no-op.
 func (c *kvClient) Close() error {
-	return nil
+    return nil
 }
 
+// Get retrieves the value for key or returns ErrKeyNotFound if missing.
 func (c *kvClient) Get(key string) ([]byte, error) {
 	if key == "" {
 		return nil, ErrInvalidKey
@@ -142,6 +159,8 @@ func (c *kvClient) Get(key string) ([]byte, error) {
 	return resp.GetData(), nil
 }
 
+// Set stores value under key. It returns ErrInvalidKey or ErrInvalidValue
+// for invalid inputs, or wraps host errors.
 func (c *kvClient) Set(key string, value []byte) error {
 	if key == "" {
 		return ErrInvalidKey
@@ -168,6 +187,7 @@ func (c *kvClient) Set(key string, value []byte) error {
 	return nil
 }
 
+// Delete removes key from the store. Deleting a non-existent key is not an error.
 func (c *kvClient) Delete(key string) error {
 	if key == "" {
 		return ErrInvalidKey
@@ -191,6 +211,7 @@ func (c *kvClient) Delete(key string) error {
 	return nil
 }
 
+// Keys returns a snapshot of keys currently in the store.
 func (c *kvClient) Keys() ([]string, error) {
 	req := &kvstore.KVStoreKeys{ReturnProto: true}
 	b, err := pb.Marshal(req)

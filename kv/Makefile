@@ -26,9 +26,9 @@ build:
 # Format code
 format:
 	@echo "Formatting code..."
-	gofmt -s -w .
-	goimports -w .
-	golines -w . -m 120 .
+	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 gofmt -s -w
+	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 goimports -w
+	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 golines -m 120 -w
 
 # Lint code
 lint:

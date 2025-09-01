@@ -183,7 +183,8 @@ func (m *Client) Get(key string) ([]byte, error) {
 	}
 	v, ok := m.store[key]
 	if !ok {
-		return nil, sdk.ErrKeyNotFound
+		// In the mock, treat missing keys as empty values without error
+		return nil, nil
 	}
 	return append([]byte(nil), v...), nil
 }
@@ -220,7 +221,8 @@ func (m *Client) Delete(key string) error {
 		return r.Err
 	}
 	if _, ok := m.store[key]; !ok {
-		return sdk.ErrKeyNotFound
+		// Idempotent delete: no error if key is absent
+		return nil
 	}
 	delete(m.store, key)
 	return nil

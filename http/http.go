@@ -13,6 +13,7 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
+// validMethods lists HTTP methods accepted by NewRequest.
 var validMethods = map[string]bool{
 	http.MethodGet:     true,
 	http.MethodHead:    true,
@@ -25,6 +26,7 @@ var validMethods = map[string]bool{
 	http.MethodTrace:   true,
 }
 
+// Client provides an interface for making HTTP requests.
 type Client interface {
 	Get(url string) (*Response, error)
 	Post(url, contentType string, body io.Reader) (*Response, error)
@@ -39,23 +41,36 @@ type Config struct {
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// httpClient implements Client using waPC host calls.
 type httpClient struct {
-	cfg      Config
-	hostCall func(string, string, string, []byte) ([]byte, error)
+    // cfg holds client configuration, including SDKConfig and TLS behavior.
+    cfg      Config
+    // hostCall performs the waPC invocation; tests may override it.
+    hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// Response represents an HTTP response returned by the host.
 type Response struct {
-	Status     string
-	StatusCode int
-	Header     http.Header
-	Body       io.ReadCloser
+    // Status is the HTTP status text (e.g., "OK").
+    Status     string
+    // StatusCode is the numeric HTTP status code (e.g., 200).
+    StatusCode int
+    // Header contains response headers. Nil is treated as empty.
+    Header     http.Header
+    // Body is the response payload stream. It may be nil for empty bodies.
+    Body       io.ReadCloser
 }
 
+// Request represents an HTTP request to be sent by the client.
 type Request struct {
-	Method string
-	URL    *url.URL
-	Header http.Header
-	Body   io.ReadCloser
+    // Method is the HTTP method (e.g., GET, POST).
+    Method string
+    // URL is the full request URL; Host must be non-empty.
+    URL    *url.URL
+    // Header holds request headers. Nil is treated as empty.
+    Header http.Header
+    // Body is an optional request body stream.
+    Body   io.ReadCloser
 }
 
 var (
@@ -67,6 +82,7 @@ var (
 	ErrInvalidMethod = errors.New("invalid HTTP method")
 )
 
+// New creates a new HTTP client with the provided configuration.
 func New(config Config) (Client, error) {
 	hc := &httpClient{cfg: config}
 
@@ -84,6 +100,7 @@ func New(config Config) (Client, error) {
 	return hc, nil
 }
 
+// Get issues a GET to the specified URL and returns the response.
 func (c *httpClient) Get(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
@@ -137,6 +154,7 @@ func (c *httpClient) Get(urlStr string) (*Response, error) {
 	return response, nil
 }
 
+// Post issues a POST to the URL with the provided contentType and body.
 func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
@@ -204,6 +222,7 @@ func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response
 	return response, nil
 }
 
+// Put issues a PUT to the URL with the provided contentType and body.
 func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
@@ -271,6 +290,7 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 	return response, nil
 }
 
+// Delete issues a DELETE to the specified URL.
 func (c *httpClient) Delete(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
@@ -324,6 +344,7 @@ func (c *httpClient) Delete(urlStr string) (*Response, error) {
 	return response, nil
 }
 
+// Do issues a custom request built with NewRequest and returns the response.
 func (c *httpClient) Do(req *Request) (*Response, error) {
 	// Read the body content if present
 	var bodyBytes []byte
@@ -394,7 +415,7 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 	return response, nil
 }
 
-// NewRequest creates a new Request object to use with the Do method
+// NewRequest creates a new Request object to use with the Do method.
 //
 // This function provides a way to create custom HTTP requests with
 // specific methods, URLs and body content.

@@ -25,7 +25,6 @@ var validMethods = map[string]bool{
 	http.MethodTrace:   true,
 }
 
-// Client provides an interface for making HTTP requests
 type Client interface {
 	Get(url string) (*Response, error)
 	Post(url, contentType string, body io.Reader) (*Response, error)
@@ -34,18 +33,9 @@ type Client interface {
 	Do(req *Request) (*Response, error)
 }
 
-// Config provides configuration options for the HTTP client
 type Config struct {
-	// SDKConfig supplies shared SDK-level configuration such as the default Namespace.
-	// If empty, sdk.DefaultNamespace is used.
 	SDKConfig sdk.RuntimeConfig
-
-	// InsecureSkipVerify controls whether the client verifies the
-	// server's certificate chain and host name
 	InsecureSkipVerify bool
-
-	// HostCall is used internally for host callbacks
-	// This is mainly here for testing
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
@@ -54,7 +44,6 @@ type httpClient struct {
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
-// Response represents an HTTP response
 type Response struct {
 	Status     string
 	StatusCode int
@@ -62,7 +51,6 @@ type Response struct {
 	Body       io.ReadCloser
 }
 
-// Request represents an HTTP request to be sent by the client
 type Request struct {
 	Method string
 	URL    *url.URL
@@ -71,26 +59,14 @@ type Request struct {
 }
 
 var (
-	// ErrorInvalidURL is returned when the provided URL is invalid
 	ErrInvalidURL = errors.New("invalid URL provided")
-
-	// ErrMarshalRequest is returned when marshaling the protobuf request fails
 	ErrMarshalRequest = errors.New("failed to create request")
-
-	// ErrorReadBody is returned when reading the request body fails
 	ErrReadBody = errors.New("failed to read request body")
-
-	// ErrorUnmarshalResponse is returned when unmarshalling the response fails
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
-
-	// ErrorHostCall is returned when the host call fails
 	ErrHostCall = errors.New("host call failed")
-
-	// ErrorInvalidMethod is returned when an invalid HTTP method is used
 	ErrInvalidMethod = errors.New("invalid HTTP method")
 )
 
-// New creates a new HTTP client with the provided configuration
 func New(config Config) (Client, error) {
 	hc := &httpClient{cfg: config}
 

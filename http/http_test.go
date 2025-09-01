@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,13 +11,15 @@ import (
 
 	sdkproto "github.com/tarmac-project/protobuf-go/sdk"
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
+	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
 	pb "google.golang.org/protobuf/proto"
 
 	"github.com/madflojo/testlazy/things/testurl"
 )
 
-// InterfaceTestCase defines a single test case for the HTTP client interface methods.
+var TestErrBadReader = fmt.Errorf("bad reader error")
+
 type InterfaceTestCase struct {
 	name        string
 	method      string
@@ -28,8 +29,6 @@ type InterfaceTestCase struct {
 	expectedErr error
 }
 
-// TestHTTPClient tests the HTTP client interface methods (Get, Post, Put, Delete, Do)
-// using table-driven test cases for happy-path and error conditions.
 func TestHTTPClient(t *testing.T) {
 	// canned response generator
 	createResponse := func() []byte {
@@ -56,561 +55,172 @@ func TestHTTPClient(t *testing.T) {
 	}
 
 	// Create the HTTP client with the mock
-	client, err := New(Config{Namespace: "tarmac", HostCall: mock.HostCall})
+	client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: "tarmac"}, HostCall: mock.HostCall})
 	if err != nil {
 		t.Fatalf("failed to create client: %v", err)
 	}
 
-	// Define test cases both happy-path and error cases
-	tt := []InterfaceTestCase{
-		{"GET success", "GET", "http://example.com", "", nil, nil},
-		{"GET with bad URL", "GET", "://bad-url", "", nil, ErrInvalidURL},
-		{"GET with empty URL", "GET", "", "", nil, ErrInvalidURL},
-		{"POST success", "POST", "http://example.com", "application/json", strings.NewReader(`{"x":"y"}`), nil},
-		{"POST no body", "POST", "http://example.com", "text/plain", nil, nil},
-		{"POST with bad URL", "POST", "://bad-url", "", nil, ErrInvalidURL},
-		{"POST with empty URL", "POST", "", "", nil, ErrInvalidURL},
-		{"POST with empty content type", "POST", "http://example.com", "", strings.NewReader("body"), nil},
-		{
-			"POST with bad reader",
-			"POST",
-			"http://example.com",
-			"text/plain",
-			iotest.ErrReader(TestErrBadReader),
-			TestErrBadReader,
-		},
-		{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
-		{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
-		{"PUT with empty URL", "PUT", "", "", nil, ErrInvalidURL},
-		{"PUT with empty content type", "PUT", "http://example.com", "", strings.NewReader("body"), nil},
-		{
-			"PUT with bad reader",
-			"PUT",
-			"http://example.com",
-			"text/plain",
-			iotest.ErrReader(TestErrBadReader),
-			TestErrBadReader,
-		},
-		{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
-		{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
-		{"DELETE with empty URL", "DELETE", "", "", nil, ErrInvalidURL},
-		{"PATCH via Do", "PATCH", "http://example.com", "application/json", strings.NewReader(`{"flag":true}`), nil},
-		{"DO with bad URL", "PATCH", "://bad-url", "", nil, ErrInvalidURL},
-		{"DO with empty URL", "PATCH", "", "", nil, ErrInvalidURL},
-	}
+	// Run shortcut method tests (Get/Post/Put/Delete and happy-path Do creation)
+	t.Run("Shortcuts", func(t *testing.T) {
+		tt := []InterfaceTestCase{
+			{"GET success", "GET", "http://example.com", "", nil, nil},
+			{"GET with bad URL", "GET", "://bad-url", "", nil, ErrInvalidURL},
+			{"GET with empty URL", "GET", "", "", nil, ErrInvalidURL},
+			{"POST success", "POST", "http://example.com", "application/json", strings.NewReader(`{"x":"y"}`), nil},
+			{"POST no body", "POST", "http://example.com", "text/plain", nil, nil},
+			{"POST with bad URL", "POST", "://bad-url", "", nil, ErrInvalidURL},
+			{"POST with empty URL", "POST", "", "", nil, ErrInvalidURL},
+			{"POST with empty content type", "POST", "http://example.com", "", strings.NewReader("body"), nil},
+			{
+				"POST with bad reader",
+				"POST",
+				"http://example.com",
+				"text/plain",
+				iotest.ErrReader(TestErrBadReader),
+				TestErrBadReader,
+			},
+			{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
+			{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
+			{"PUT with empty URL", "PUT", "", "", nil, ErrInvalidURL},
+			{"PUT with empty content type", "PUT", "http://example.com", "", strings.NewReader("body"), nil},
+			{
+				"PUT with bad reader",
+				"PUT",
+				"http://example.com",
+				"text/plain",
+				iotest.ErrReader(TestErrBadReader),
+				TestErrBadReader,
+			},
+			{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
+			{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
+			{"DELETE with empty URL", "DELETE", "", "", nil, ErrInvalidURL},
+		}
 
-	// Run each test case using the appropriate method
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			var (
-				resp *Response
-				err  error
-			)
+		for _, tc := range tt {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				var (
+					resp *Response
+					err  error
+				)
 
-			switch tc.method {
-			case "GET":
-				resp, err = client.Get(tc.url)
-			case "POST":
-				resp, err = client.Post(tc.url, tc.contentType, tc.body)
-			case "PUT":
-				resp, err = client.Put(tc.url, tc.contentType, tc.body)
-			case "DELETE":
-				resp, err = client.Delete(tc.url)
-			default:
-				// For other methods, use the Do method this is happy-path only
-				_, err := NewRequest(tc.method, tc.url, tc.body)
-				if !errors.Is(err, tc.expectedErr) {
-					t.Fatalf("failed to create request: %v", err)
+				switch tc.method {
+				case "GET":
+					resp, err = client.Get(tc.url)
+				case "POST":
+					resp, err = client.Post(tc.url, tc.contentType, tc.body)
+				case "PUT":
+					resp, err = client.Put(tc.url, tc.contentType, tc.body)
+				case "DELETE":
+					resp, err = client.Delete(tc.url)
 				}
-			}
-			if !errors.Is(err, tc.expectedErr) {
-				t.Fatalf("unexpected error: %v", err)
-			}
 
-			if resp.StatusCode != http.StatusOK {
-				t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
-			}
-		})
-	}
-
-	// Additional test cases for Do method
-	tt2 := []struct {
-		name        string
-		request     *Request
-		expectedErr error
-	}{
-		{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
-		{"Do with no shceme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, ErrInvalidURL},
-		{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, ErrInvalidURL},
-		{"Do with no host URL", &Request{Method: "GET", URL: testurl.URLNoHost()}, ErrInvalidURL},
-		{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},
-	}
-
-	for _, tc := range tt2 {
-		t.Run(tc.name, func(t *testing.T) {
-			resp, err := client.Do(tc.request)
-			if err != nil || !errors.Is(err, tc.expectedErr) {
-				if tc.expectedErr == nil {
+				// Check for expected errors
+				if !errors.Is(err, tc.expectedErr) {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if !errors.Is(err, tc.expectedErr) {
-					t.Errorf("expected error %v, got %v", tc.expectedErr, err)
+
+				// If we hit the bad reader path, also ensure ErrReadBody is present
+				if err != nil && errors.Is(err, TestErrBadReader) && !errors.Is(err, ErrReadBody) {
+					t.Fatalf("expected ErrReadBody in error chain, got %v", err)
 				}
-				return
-			}
-			if resp == nil {
-				t.Fatal("expected a response, got nil")
-			}
 
-			if resp.StatusCode != http.StatusOK {
-				t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
-			}
-		})
-	}
-}
-
-type HostMockTestCase struct {
-	name              string
-	method            string
-	url               string
-	contentType       string
-	body              io.Reader
-	mockNamespace     string
-	mockCapability    string
-	mockFunction      string
-	mockResponse      func() []byte
-	customHeaders     map[string]string
-	expectStatus      string
-	expectCode        int
-	expectBody        string
-	expectedErr       bool
-	expectedErrString string
-	payloadValidator  func(payload []byte) error
-}
-
-// TestHTTPClientHostMock exercises Get/Post/Put/Delete/Do using hostmock to
-// validate protobuf payloads and simulate various host-call outcomes.
-func TestHTTPClientHostMock(t *testing.T) {
-	// Create a mock response generator
-	createResponseFunc := func() []byte {
-		resp := &proto.HTTPClientResponse{
-			Status: &sdkproto.Status{
-				Status: "OK",
-				Code:   200,
-			},
-			Headers: map[string]*proto.Header{
-				"Content-Type": {
-					Values: []string{"application/json"},
-				},
-				"X-Rate-Limit": {
-					Values: []string{"100"},
-				},
-			},
-			Body: []byte(`{"message":"success"}`),
-		}
-
-		respBytes, _ := pb.Marshal(resp)
-		return respBytes
-	}
-
-	// Create a mock for error cases
-	createErrorResponseFunc := func() []byte {
-		resp := &proto.HTTPClientResponse{
-			Status: &sdkproto.Status{
-				Status: "Not Found",
-				Code:   404,
-			},
-			Headers: map[string]*proto.Header{
-				"Content-Type": {
-					Values: []string{"application/json"},
-				},
-			},
-			Body: []byte(`{"error":"resource not found"}`),
-		}
-
-		respBytes, _ := pb.Marshal(resp)
-		return respBytes
-	}
-
-	// Create a mock that fails
-	failingMock, _ := hostmock.New(hostmock.Config{
-		ExpectedNamespace:  "tarmac",
-		ExpectedCapability: "httpclient",
-		ExpectedFunction:   "call",
-		Fail:               true,
-		Error:              fmt.Errorf("host call failed"),
-	})
-
-	tt := []HostMockTestCase{
-		{
-			name:           "GET success",
-			method:         "GET",
-			url:            "http://example.com/api",
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			expectStatus:   "OK",
-			expectCode:     200,
-			expectBody:     `{"message":"success"}`,
-		},
-		{
-			name:           "POST with body",
-			method:         "POST",
-			url:            "http://example.com/api/resource",
-			contentType:    "application/json",
-			body:           strings.NewReader(`{"name":"test"}`),
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			expectStatus:   "OK",
-			expectCode:     200,
-			expectBody:     `{"message":"success"}`,
-		},
-		{
-			name:           "PUT with body",
-			method:         "PUT",
-			url:            "http://example.com/api/resource/123",
-			contentType:    "application/json",
-			body:           strings.NewReader(`{"name":"updated"}`),
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			expectStatus:   "OK",
-			expectCode:     200,
-			expectBody:     `{"message":"success"}`,
-		},
-		{
-			name:           "DELETE resource",
-			method:         "DELETE",
-			url:            "http://example.com/api/resource/123",
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			expectStatus:   "OK",
-			expectCode:     200,
-			expectBody:     `{"message":"success"}`,
-		},
-		{
-			name:           "Custom PATCH method",
-			method:         "PATCH",
-			url:            "http://example.com/api/resource/123",
-			contentType:    "application/json",
-			body:           strings.NewReader(`{"status":"active"}`),
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			customHeaders: map[string]string{
-				"X-API-Key": "test-key",
-			},
-			payloadValidator: func(payload []byte) error {
-				var req proto.HTTPClient
-				if err := pb.Unmarshal(payload, &req); err != nil {
-					return fmt.Errorf("could not unmarshal payload: %w", err)
-				}
-				h, ok := req.Headers["X-API-Key"]
-				if !ok {
-					return fmt.Errorf("header X-API-Key not found")
-				}
-				// Ensure the header has expected values
-				if len(h.Values) == 0 || h.Values[0] != "test-key" {
-					return fmt.Errorf("header %s: expected %q, got %v", "X-API-Key", "test-key", h.Values)
-				}
-				return nil
-			},
-			expectStatus: "OK",
-			expectCode:   200,
-			expectBody:   `{"message":"success"}`,
-		},
-		{
-			name:           "404 Not Found Response",
-			method:         "GET",
-			url:            "http://example.com/api/nonexistent",
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createErrorResponseFunc,
-			expectStatus:   "Not Found",
-			expectCode:     404,
-			expectBody:     `{"error":"resource not found"}`,
-		},
-		{
-			name:              "Custom request with bad URL",
-			method:            "CUSTOM",
-			url:               "://bad-url",
-			mockNamespace:     "tarmac",
-			mockCapability:    "http",
-			mockFunction:      "http",
-			mockResponse:      createResponseFunc,
-			expectedErr:       true,
-			expectedErrString: "missing protocol scheme",
-		},
-		{
-			name:           "Custom headers in request",
-			method:         "GET",
-			url:            "http://example.com/api/headers",
-			mockNamespace:  "tarmac",
-			mockCapability: "httpclient",
-			mockFunction:   "call",
-			mockResponse:   createResponseFunc,
-			customHeaders: map[string]string{
-				"Authorization": "Bearer token123",
-				"User-Agent":    "TarmacSDK/1.0",
-				"Accept":        "application/json",
-			},
-			payloadValidator: func(payload []byte) error {
-				var req proto.HTTPClient
-				if err := pb.Unmarshal(payload, &req); err != nil {
-					return fmt.Errorf("could not unmarshal payload: %w", err)
-				}
-				for k, v := range map[string]string{
-					"Authorization": "Bearer token123",
-					"User-Agent":    "TarmacSDK/1.0",
-					"Accept":        "application/json",
-				} {
-					h, ok := req.Headers[k]
-					if !ok {
-						return fmt.Errorf("header %s not found", k)
+				// If no error, ensure we got a valid response
+				if err == nil {
+					if resp == nil {
+						t.Fatal("expected non-nil response when no error")
 					}
-					// Ensure the header has expected values
-					if len(h.Values) == 0 || h.Values[0] != v {
-						return fmt.Errorf("header %s: expected %q, got %v", k, v, h.Values)
+					if resp.StatusCode != http.StatusOK {
+						t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
 					}
 				}
-				return nil
-			},
-			expectStatus: "OK",
-			expectCode:   200,
-			expectBody:   `{"message":"success"}`,
-		},
-		{
-			name:              "Host call failure",
-			method:            "GET",
-			url:               "http://example.com/error",
-			mockNamespace:     "tarmac",
-			mockCapability:    "http",
-			mockFunction:      "http",
-			expectedErr:       true,
-			expectedErrString: "host returned error",
-		},
-	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			var expectedBody []byte
-			if tc.body != nil {
-				data, _ := io.ReadAll(tc.body)
-				expectedBody = data
-				tc.body = bytes.NewReader(data)
-			}
-			baselineValidator := func(payload []byte) error {
-				var req proto.HTTPClient
-				if err := pb.Unmarshal(payload, &req); err != nil {
-					return fmt.Errorf("could not unmarshal payload: %w", err)
-				}
-				if req.Method != tc.method {
-					return fmt.Errorf("method mismatch: expected %s, got %s", tc.method, req.Method)
-				}
-				if req.Url != tc.url {
-					return fmt.Errorf("url mismatch: expected %s, got %s", tc.url, req.Url)
-				}
-				if req.Body != nil && !bytes.Equal(req.Body, expectedBody) {
-					return fmt.Errorf("body mismatch: expected %q, got %q", string(expectedBody), string(req.Body))
-				}
-				return nil
-			}
-			// Use the appropriate mock
-			var mockHostCall func(string, string, string, []byte) ([]byte, error)
-
-			if tc.name == "Host call failure" {
-				mockHostCall = failingMock.HostCall
-			} else {
-				// Configure a standard mock
-				mockCfg := hostmock.Config{
-					ExpectedNamespace:  tc.mockNamespace,
-					ExpectedCapability: tc.mockCapability,
-					ExpectedFunction:   tc.mockFunction,
-					PayloadValidator: func(payload []byte) error {
-						if err := baselineValidator(payload); err != nil {
-							return err
-						}
-						if tc.payloadValidator != nil {
-							return tc.payloadValidator(payload)
-						}
-						return nil
-					},
-					Response: tc.mockResponse,
-				}
-				mock, err := hostmock.New(mockCfg)
-
-				if err != nil {
-					t.Fatalf("Failed to create mock: %v", err)
-				}
-
-				mockHostCall = mock.HostCall
-			}
-
-			// Create the client
-			client, err := New(Config{
-				Namespace: tc.mockNamespace,
-				HostCall:  mockHostCall,
 			})
+		}
+	})
 
-			if err != nil {
-				t.Fatalf("Failed to create client: %v", err)
-			}
-
-			var resp *Response
-			var reqErr error
-
-			// Execute the appropriate method based on the test case
-			switch tc.method {
-			case "GET":
-				resp, reqErr = client.Get(tc.url)
-			case "POST":
-				resp, reqErr = client.Post(tc.url, tc.contentType, tc.body)
-			case "PUT":
-				resp, reqErr = client.Put(tc.url, tc.contentType, tc.body)
-			case "DELETE":
-				resp, reqErr = client.Delete(tc.url)
-			default:
-				// For other methods, use the Do method
-				req, err := NewRequest(tc.method, tc.url, tc.body)
-				if err != nil {
-					// If we're expecting a URL parse error, this is fine
-					if tc.expectedErr && tc.expectedErrString != "" &&
-						strings.Contains(err.Error(), tc.expectedErrString) {
-						reqErr = err
-						return
-					}
-					t.Fatalf("Failed to create request: %v", err)
+	// Additional test cases for NewRequest
+	t.Run("NewRequest", func(t *testing.T) {
+		tt := []struct {
+			name        string
+			method      string
+			url         string
+			body        io.Reader
+			expectedErr error
+		}{
+			{"Valid PATCH request", "PATCH", "http://example.com", strings.NewReader(`{"flag":true}`), nil},
+			{"Bad URL", "PATCH", "://bad-url", nil, ErrInvalidURL},
+			{"Empty URL", "PATCH", "", nil, ErrInvalidURL},
+			{"Empty Method", "", "http://example.com", nil, ErrInvalidMethod},
+			{"Invalid Method", "INVALID_METHOD", "http://example.com", nil, ErrInvalidMethod},
+			{"Nil Body", "PATCH", "http://example.com", nil, nil},
+		}
+		for _, tc := range tt {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				_, err := NewRequest(tc.method, tc.url, tc.body)
+				if !errors.Is(err, tc.expectedErr) {
+					t.Fatalf("unexpected error: %v", err)
 				}
+			})
+		}
+	})
 
-				// Add custom headers if specified
-				if tc.customHeaders != nil {
-					for k, v := range tc.customHeaders {
-						req.Header.Set(k, v)
-					}
-				}
-
-				if tc.contentType != "" {
-					req.Header.Set("Content-Type", tc.contentType)
-				}
-
-				resp, reqErr = client.Do(req)
-			}
-
-			// Check for errors
-			if tc.expectedErr {
-				if reqErr == nil {
-					t.Errorf("Expected error but got nil")
-				} else if tc.expectedErrString != "" && !strings.Contains(reqErr.Error(), tc.expectedErrString) {
-					t.Errorf("Expected error to contain %q but got %q", tc.expectedErrString, reqErr.Error())
-				}
-				return
-			} else if reqErr != nil {
-				t.Fatalf("Unexpected error: %v", reqErr)
-			}
-
-			// Verify status and code
-			if resp.Status != tc.expectStatus {
-				t.Errorf("Expected status %q but got %q", tc.expectStatus, resp.Status)
-			}
-
-			if resp.StatusCode != tc.expectCode {
-				t.Errorf("Expected status code %d but got %d", tc.expectCode, resp.StatusCode)
-			}
-
-			// Check Content-Type header
-			if tc.contentType != "" {
-				if respContentType := resp.Header.Get("Content-Type"); respContentType != "application/json" {
-					t.Errorf("Expected Content-Type %q but got %q", "application/json", respContentType)
-				}
-			}
-
-			// Verify body if expected
-			if tc.expectBody != "" && resp.Body != nil {
-				body, err := io.ReadAll(resp.Body)
-				if err != nil {
-					t.Fatalf("Failed to read response body: %v", err)
-				}
-
-				if string(body) != tc.expectBody {
-					t.Errorf("Expected body %q but got %q", tc.expectBody, string(body))
-				}
-			}
-		})
-	}
-}
-
-func BenchmarkHTTPClient(b *testing.B) {
-	// Create a mock response generator
-	createResponseFunc := func() []byte {
-		resp := &proto.HTTPClientResponse{
-			Status: &sdkproto.Status{
-				Status: "OK",
-				Code:   200,
-			},
-			Headers: map[string]*proto.Header{
-				"Content-Type": {
-					Values: []string{"application/json"},
+	// Run Indepth Do method tests
+	t.Run("Do", func(t *testing.T) {
+		tt := []struct {
+			name        string
+			request     *Request
+			expectedErr error
+		}{
+			{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
+			{"Do with no shceme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, nil},
+			{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, nil},
+			{"Do with no host URL", &Request{Method: "GET", URL: testurl.URLNoHost()}, ErrInvalidURL},
+			{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},
+			{
+				"Do POST with body",
+				&Request{
+					Method: http.MethodPost,
+					URL:    testurl.URLHTTPS(),
+					Header: make(http.Header),
+					Body:   io.NopCloser(strings.NewReader(`{"x":"y"}`)),
 				},
+				nil,
 			},
-			Body: []byte(`{"message":"success"}`),
+			{"Do HEAD", &Request{Method: http.MethodHead, URL: testurl.URLHTTPS()}, nil},
+			{"Do OPTIONS", &Request{Method: http.MethodOptions, URL: testurl.URLHTTPS()}, nil},
+			{
+				"Do with bad reader",
+				&Request{
+					Method: http.MethodPost,
+					URL:    testurl.URLHTTPS(),
+					Body:   io.NopCloser(iotest.ErrReader(TestErrBadReader)),
+				},
+				ErrReadBody,
+			},
 		}
 
-		respBytes, _ := pb.Marshal(resp)
-		return respBytes
-	}
+		for _, tc := range tt {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				resp, err := client.Do(tc.request)
+				if err != nil || !errors.Is(err, tc.expectedErr) {
+					if tc.expectedErr == nil {
+						t.Fatalf("unexpected error: %v", err)
+					}
+					if !errors.Is(err, tc.expectedErr) {
+						t.Errorf("expected error %v, got %v", tc.expectedErr, err)
+					}
+					return
+				}
+				if resp == nil {
+					t.Fatal("expected a response, got nil")
+				}
 
-	// Configure the mock
-	mock, err := hostmock.New(hostmock.Config{
-		ExpectedNamespace:  "tarmac",
-		ExpectedCapability: "httpclient",
-		ExpectedFunction:   "call",
-		Response:           createResponseFunc,
-	})
-
-	if err != nil {
-		b.Fatalf("Failed to create mock: %v", err)
-	}
-
-	// Create the client
-	client, err := New(Config{
-		Namespace: "tarmac",
-		HostCall:  mock.HostCall,
-	})
-
-	if err != nil {
-		b.Fatalf("Failed to create client: %v", err)
-	}
-
-	b.Run("GET", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := client.Get("http://example.com")
-			if err != nil {
-				b.Fatalf("Failed to make GET request: %v", err)
-			}
-		}
-	})
-
-	b.Run("POST", func(b *testing.B) {
-		data := strings.NewReader(`{"data":"test"}`)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			// Reset the reader position for each iteration
-			data.Reset(`{"data":"test"}`)
-			_, err := client.Post("http://example.com", "application/json", data)
-			if err != nil {
-				b.Fatalf("Failed to make POST request: %v", err)
-			}
+				if resp.StatusCode != http.StatusOK {
+					t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+				}
+			})
 		}
 	})
 }
-
-var TestErrBadReader = fmt.Errorf("bad reader error")

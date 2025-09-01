@@ -1,104 +1,8 @@
-/*
-Package http provides a client for making HTTP requests from WebAssembly functions running in Tarmac.
-
-This package allows Tarmac functions to make outbound HTTP requests to external services. It uses the
-Web Assembly Procedure Call (waPC) protocol to communicate with the Tarmac host, which handles the
-actual HTTP communication.
-
-# Basic Usage
-
-Create a client and make requests:
-
-	client, err := http.New(http.Config{
-	    Namespace: "my-service",
-	})
-	if err != nil {
-	    // handle error
-	}
-
-	// Make a GET request
-	resp, err := client.Get("https://example.com")
-	if err != nil {
-	    // handle error
-	}
-
-	// Read the response body
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-	    // handle error
-	}
-
-	// Use the response data
-	fmt.Println(string(data))
-
-# Making POST/PUT Requests
-
-Send data with POST/PUT requests:
-
-	// POST request with JSON body
-	jsonBody := strings.NewReader(`{"key":"value"}`)
-	resp, err := client.Post("https://example.com/api", "application/json", jsonBody)
-	if err != nil {
-	    // handle error
-	}
-
-	// PUT request
-	resp, err := client.Put("https://example.com/resource/123", "application/json", jsonBody)
-	if err != nil {
-	    // handle error
-	}
-
-# Custom Requests
-
-Create custom requests with headers:
-
-	// Create a custom request
-	req, err := http.NewRequest("PATCH", "https://example.com/resource", jsonBody)
-	if err != nil {
-	    // handle error
-	}
-
-	// Add custom headers
-	req.Header.Set("Authorization", "Bearer token123")
-	req.Header.Set("X-Custom-Header", "value")
-
-	// Send the custom request
-	resp, err := client.Do(req)
-	if err != nil {
-	    // handle error
-	}
-
-# Testing with Mocks
-
-The http/mock subpackage provides a simple way to mock HTTP responses for testing:
-
-	import "github.com/tarmac-project/sdk/http/mock"
-
-	// Create a mock HTTP client
-	mockClient := mock.New(mock.Config{
-	    DefaultResponse: &mock.Response{
-	        StatusCode: 200,
-	        Status: "OK",
-	        Body: []byte(`{"success":true}`),
-	    },
-	})
-
-	// Configure specific endpoint responses
-	mockClient.On("GET", "https://example.com/api").Return(&mock.Response{
-	    StatusCode: 200,
-	    Status: "OK",
-	    Body: []byte(`{"data":"example"}`),
-	})
-
-	// Configure an error response
-	mockClient.On("GET", "https://example.com/error").ReturnError(fmt.Errorf("connection failed"))
-*/
 package http
 
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -108,6 +12,18 @@ import (
 	wapc "github.com/wapc/wapc-guest-tinygo"
 	pb "google.golang.org/protobuf/proto"
 )
+
+var validMethods = map[string]bool{
+	http.MethodGet:     true,
+	http.MethodHead:    true,
+	http.MethodPost:    true,
+	http.MethodPut:     true,
+	http.MethodPatch:   true,
+	http.MethodDelete:  true,
+	http.MethodConnect: true,
+	http.MethodOptions: true,
+	http.MethodTrace:   true,
+}
 
 // Client provides an interface for making HTTP requests
 type Client interface {
@@ -120,12 +36,8 @@ type Client interface {
 
 // Config provides configuration options for the HTTP client
 type Config struct {
-	// Namespace controls the function namespace to use for host callbacks
-	// The default value is "default" which is the global namespace
-	Namespace string
-
-	// SDKConfig supplies shared SDK-level configuration such as the
-	// default Namespace. If Namespace above is set, it takes precedence.
+	// SDKConfig supplies shared SDK-level configuration such as the default Namespace.
+	// If empty, sdk.DefaultNamespace is used.
 	SDKConfig sdk.RuntimeConfig
 
 	// InsecureSkipVerify controls whether the client verifies the
@@ -162,6 +74,9 @@ var (
 	// ErrorInvalidURL is returned when the provided URL is invalid
 	ErrInvalidURL = errors.New("invalid URL provided")
 
+	// ErrMarshalRequest is returned when marshaling the protobuf request fails
+	ErrMarshalRequest = errors.New("failed to create request")
+
 	// ErrorReadBody is returned when reading the request body fails
 	ErrReadBody = errors.New("failed to read request body")
 
@@ -170,52 +85,60 @@ var (
 
 	// ErrorHostCall is returned when the host call fails
 	ErrHostCall = errors.New("host call failed")
+
+	// ErrorInvalidMethod is returned when an invalid HTTP method is used
+	ErrInvalidMethod = errors.New("invalid HTTP method")
 )
 
 // New creates a new HTTP client with the provided configuration
 func New(config Config) (Client, error) {
+	hc := &httpClient{cfg: config}
+
 	// Set default namespace if not provided
-	if config.Namespace == "" {
-		if config.SDKConfig.Namespace != "" {
-			config.Namespace = config.SDKConfig.Namespace
-		} else {
-			config.Namespace = "default"
-		}
+	if hc.cfg.SDKConfig.Namespace == "" {
+		hc.cfg.SDKConfig.Namespace = sdk.DefaultNamespace
 	}
 
-	// Use the provided host call function or default to waPC.HostCall
-	hostCallFn := config.HostCall
-	if hostCallFn == nil {
-		hostCallFn = wapc.HostCall
+	// Set HostCall function if provided
+	hc.hostCall = wapc.HostCall
+	if config.HostCall != nil {
+		hc.hostCall = config.HostCall
 	}
 
-	return &httpClient{
-		hostCall: hostCallFn,
-		cfg:      config,
-	}, nil
+	return hc, nil
 }
 
-func (c *httpClient) Get(url string) (*Response, error) {
+func (c *httpClient) Get(urlStr string) (*Response, error) {
+	// Validate the URL
+	u, err := url.Parse(urlStr)
+	if err != nil || u == nil || u.Host == "" {
+		return nil, ErrInvalidURL
+	}
+
+	// Create the Protobuf request
 	req := &proto.HTTPClient{
 		Method:   "GET",
-		Url:      url,
+		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
 	}
 
+	// Marshal the request
 	b, err := pb.Marshal(req)
 	if err != nil {
-		return &Response{}, fmt.Errorf("failed to create request: %w", err)
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
 
-	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
+	// Call the host
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, fmt.Errorf("host returned error: %w", err)
+		return &Response{}, errors.Join(ErrHostCall, err)
 	}
 
+	// Unmarshal the response
 	var r proto.HTTPClientResponse
 	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, fmt.Errorf("failed to unmarshal host response: %w", err)
+		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
 	}
 
 	// Build the response object
@@ -238,21 +161,26 @@ func (c *httpClient) Get(url string) (*Response, error) {
 	return response, nil
 }
 
-func (c *httpClient) Post(url, contentType string, body io.Reader) (*Response, error) {
+func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response, error) {
+	// Validate the URL
+	u, err := url.Parse(urlStr)
+	if err != nil || u == nil || u.Host == "" {
+		return nil, ErrInvalidURL
+	}
+
 	// Read the body content if present
 	var bodyBytes []byte
-	var err error
 	if body != nil {
 		bodyBytes, err = io.ReadAll(body)
 		if err != nil {
-			return &Response{}, fmt.Errorf("failed to read request body: %w", err)
+			return &Response{}, errors.Join(ErrReadBody, err)
 		}
 	}
 
 	// Create the Protobuf request
 	req := &proto.HTTPClient{
 		Method:   "POST",
-		Url:      url,
+		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
 		Headers: map[string]*proto.Header{
@@ -265,19 +193,19 @@ func (c *httpClient) Post(url, contentType string, body io.Reader) (*Response, e
 	// Marshal the request
 	b, err := pb.Marshal(req)
 	if err != nil {
-		return &Response{}, fmt.Errorf("failed to create request: %w", err)
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, fmt.Errorf("host returned error: %w", err)
+		return &Response{}, errors.Join(ErrHostCall, err)
 	}
 
 	// Unmarshal the response
 	var r proto.HTTPClientResponse
 	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, fmt.Errorf("failed to unmarshal host response: %w", err)
+		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
 	}
 
 	// Build the response object
@@ -300,21 +228,26 @@ func (c *httpClient) Post(url, contentType string, body io.Reader) (*Response, e
 	return response, nil
 }
 
-func (c *httpClient) Put(url, contentType string, body io.Reader) (*Response, error) {
+func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response, error) {
+	// Validate the URL
+	u, err := url.Parse(urlStr)
+	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return nil, ErrInvalidURL
+	}
+
 	// Read the body content if present
 	var bodyBytes []byte
-	var err error
 	if body != nil {
 		bodyBytes, err = io.ReadAll(body)
 		if err != nil {
-			return &Response{}, fmt.Errorf("failed to read request body: %w", err)
+			return &Response{}, errors.Join(ErrReadBody, err)
 		}
 	}
 
 	// Create the Protobuf request
 	req := &proto.HTTPClient{
 		Method:   "PUT",
-		Url:      url,
+		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
 		Headers: map[string]*proto.Header{
@@ -327,19 +260,19 @@ func (c *httpClient) Put(url, contentType string, body io.Reader) (*Response, er
 	// Marshal the request
 	b, err := pb.Marshal(req)
 	if err != nil {
-		return &Response{}, fmt.Errorf("failed to create request: %w", err)
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, fmt.Errorf("host returned error: %w", err)
+		return &Response{}, errors.Join(ErrHostCall, err)
 	}
 
 	// Unmarshal the response
 	var r proto.HTTPClientResponse
 	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, fmt.Errorf("failed to unmarshal host response: %w", err)
+		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
 	}
 
 	// Build the response object
@@ -362,11 +295,17 @@ func (c *httpClient) Put(url, contentType string, body io.Reader) (*Response, er
 	return response, nil
 }
 
-func (c *httpClient) Delete(url string) (*Response, error) {
+func (c *httpClient) Delete(urlStr string) (*Response, error) {
+	// Validate the URL
+	u, err := url.Parse(urlStr)
+	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return nil, ErrInvalidURL
+	}
+
 	// Create the Protobuf request
 	req := &proto.HTTPClient{
 		Method:   "DELETE",
-		Url:      url,
+		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
 	}
@@ -374,19 +313,19 @@ func (c *httpClient) Delete(url string) (*Response, error) {
 	// Marshal the request
 	b, err := pb.Marshal(req)
 	if err != nil {
-		return &Response{}, fmt.Errorf("failed to create request: %w", err)
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, fmt.Errorf("host returned error: %w", err)
+		return &Response{}, errors.Join(ErrHostCall, err)
 	}
 
 	// Unmarshal the response
 	var r proto.HTTPClientResponse
 	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, fmt.Errorf("failed to unmarshal host response: %w", err)
+		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
 	}
 
 	// Build the response object
@@ -416,11 +355,12 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 	if req.Body != nil {
 		bodyBytes, err = io.ReadAll(req.Body)
 		if err != nil {
-			return &Response{}, fmt.Errorf("failed to read request body: %w", err)
+			return &Response{}, errors.Join(ErrReadBody, err)
 		}
 	}
 
-	if req.URL == nil {
+	// Validate the URL
+	if req.URL == nil || req.URL.Host == "" {
 		return &Response{}, ErrInvalidURL
 	}
 
@@ -443,19 +383,19 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 	// Marshal the request
 	b, err := pb.Marshal(pbReq)
 	if err != nil {
-		return &Response{}, fmt.Errorf("failed to create request: %w", err)
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
 
 	// Make the host call
-	resp, err := c.hostCall(c.cfg.Namespace, "httpclient", "call", b)
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, fmt.Errorf("host returned error: %w", err)
+		return &Response{}, errors.Join(ErrHostCall, err)
 	}
 
 	// Unmarshal the response
 	var r proto.HTTPClientResponse
 	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, fmt.Errorf("failed to unmarshal host response: %w", err)
+		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
 	}
 
 	// Build the response object
@@ -483,17 +423,25 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 // This function provides a way to create custom HTTP requests with
 // specific methods, URLs and body content.
 func NewRequest(method, urlString string, body io.Reader) (*Request, error) {
-	parsedURL, err := url.Parse(urlString)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	// Validate the HTTP method first
+	if _, ok := validMethods[method]; !ok {
+		return nil, ErrInvalidMethod
 	}
 
+	// Validate the URL
+	parsedURL, err := url.Parse(urlString)
+	if err != nil || parsedURL == nil || parsedURL.Host == "" {
+		return nil, ErrInvalidURL
+	}
+
+	// Create the Request object
 	req := &Request{
 		Method: method,
 		URL:    parsedURL,
 		Header: make(http.Header),
 	}
 
+	// Set the body if provided
 	if body != nil {
 		req.Body = io.NopCloser(body)
 	}

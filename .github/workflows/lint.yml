@@ -19,17 +19,6 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        module: [
-          ".",
-          "./function",
-          "./http",
-          "./kv",
-          "./log",
-          "./metrics",
-          "./sql"
-        ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -40,5 +29,4 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
-          working-directory: ${{ matrix.module }}
           args: --timeout=5m

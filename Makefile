@@ -2,7 +2,7 @@
 
 all: build tests lint
 
-COMPONENTS = function http kv log metrics sql
+COMPONENTS = http
 
 # Run tests for all components
 tests:

@@ -316,96 +316,135 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 }
 
 func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
-    // Validate that InsecureSkipVerify maps to the protobuf 'Insecure' field.
-    validateInsecure := func(expected bool) func([]byte) error {
-        return func(p []byte) error {
-            var req proto.HTTPClient
-            if err := pb.Unmarshal(p, &req); err != nil { return err }
-            if req.Insecure != expected {
-                return fmt.Errorf("insecure flag: want %v got %v", expected, req.Insecure)
-            }
-            return nil
-        }
-    }
+	// Validate that InsecureSkipVerify maps to the protobuf 'Insecure' field.
+	validateInsecure := func(expected bool) func([]byte) error {
+		return func(p []byte) error {
+			var req proto.HTTPClient
+			if err := pb.Unmarshal(p, &req); err != nil {
+				return err
+			}
+			if req.Insecure != expected {
+				return fmt.Errorf("insecure flag: want %v got %v", expected, req.Insecure)
+			}
+			return nil
+		}
+	}
 
-    mockCfg := hostmock.Config{
-        ExpectedNamespace:  sdk.DefaultNamespace,
-        ExpectedCapability: "httpclient",
-        ExpectedFunction:   "call",
-        PayloadValidator:   validateInsecure(true),
-        Response:           okResponse,
-    }
-    client, err := newClientWith(mockCfg)
-    if err != nil { t.Fatalf("client: %v", err) }
+	mockCfg := hostmock.Config{
+		ExpectedNamespace:  sdk.DefaultNamespace,
+		ExpectedCapability: "httpclient",
+		ExpectedFunction:   "call",
+		PayloadValidator:   validateInsecure(true),
+		Response:           okResponse,
+	}
+	client, err := newClientWith(mockCfg)
+	if err != nil {
+		t.Fatalf("client: %v", err)
+	}
 
-    // Override to set InsecureSkipVerify = true
-    mock, _ := hostmock.New(mockCfg)
-    c, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: sdk.DefaultNamespace}, InsecureSkipVerify: true, HostCall: mock.HostCall})
-    if err != nil { t.Fatalf("new: %v", err) }
-    if _, err := c.Get("http://example.com"); err != nil { t.Fatalf("get: %v", err) }
-    _ = client // silence unused variable in case of future expansion
+	// Override to set InsecureSkipVerify = true
+	mock, _ := hostmock.New(mockCfg)
+	c, err := New(
+		Config{
+			SDKConfig:          sdk.RuntimeConfig{Namespace: sdk.DefaultNamespace},
+			InsecureSkipVerify: true,
+			HostCall:           mock.HostCall,
+		},
+	)
+	if err != nil {
+		t.Fatalf("new: %v", err)
+	}
+	if _, err := c.Get("http://example.com"); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	_ = client // silence unused variable in case of future expansion
 }
 
 func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {
-    // Response with no body
-    statusOnly := func() []byte {
-        r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-        b, _ := pb.Marshal(r)
-        return b
-    }
+	// Response with no body
+	statusOnly := func() []byte {
+		r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
+		b, _ := pb.Marshal(r)
+		return b
+	}
 
-    tt := []struct{
-        name    string
-        method  string
-        url     string
-        body    string
-    }{
-        {"POST no response body", http.MethodPost, "http://example.com", `{"x":1}`},
-        {"PUT nil request body and no response body", http.MethodPut, "http://example.com/1", ""},
-        {"DELETE no response body", http.MethodDelete, "http://example.com/1", ""},
-    }
+	tt := []struct {
+		name   string
+		method string
+		url    string
+		body   string
+	}{
+		{"POST no response body", http.MethodPost, "http://example.com", `{"x":1}`},
+		{"PUT nil request body and no response body", http.MethodPut, "http://example.com/1", ""},
+		{"DELETE no response body", http.MethodDelete, "http://example.com/1", ""},
+	}
 
-    for _, tc := range tt {
-        tc := tc
-        t.Run(tc.name, func(t *testing.T) {
-            client, err := newClientWith(hostmock.Config{
-                ExpectedNamespace:  sdk.DefaultNamespace,
-                ExpectedCapability: "httpclient",
-                ExpectedFunction:   "call",
-                Response:           statusOnly,
-                PayloadValidator:   baselineValidator(tc.method, tc.url, func() []byte { if tc.body=="" {return nil}; return []byte(tc.body)}()),
-            })
-            if err != nil { t.Fatalf("client: %v", err) }
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			client, err := newClientWith(hostmock.Config{
+				ExpectedNamespace:  sdk.DefaultNamespace,
+				ExpectedCapability: "httpclient",
+				ExpectedFunction:   "call",
+				Response:           statusOnly,
+				PayloadValidator: baselineValidator(tc.method, tc.url, func() []byte {
+					if tc.body == "" {
+						return nil
+					}
+					return []byte(tc.body)
+				}()),
+			})
+			if err != nil {
+				t.Fatalf("client: %v", err)
+			}
 
-            var resp *Response
-            switch tc.method {
-            case http.MethodPost:
-                resp, err = client.Post(tc.url, "application/json", strings.NewReader(tc.body))
-            case http.MethodPut:
-                // nil body path
-                resp, err = client.Put(tc.url, "application/json", nil)
-            case http.MethodDelete:
-                resp, err = client.Delete(tc.url)
-            }
-            if err != nil { t.Fatalf("unexpected error: %v", err) }
-            if resp == nil { t.Fatal("nil response") }
-            if resp.Body != nil { t.Fatalf("expected no body, got non-nil") }
-        })
-    }
+			var resp *Response
+			switch tc.method {
+			case http.MethodPost:
+				resp, err = client.Post(tc.url, "application/json", strings.NewReader(tc.body))
+			case http.MethodPut:
+				// nil body path
+				resp, err = client.Put(tc.url, "application/json", nil)
+			case http.MethodDelete:
+				resp, err = client.Delete(tc.url)
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Fatal("nil response")
+			}
+			if resp.Body != nil {
+				t.Fatalf("expected no body, got non-nil")
+			}
+		})
+	}
 
-    t.Run("Do HEAD no response body", func(t *testing.T) {
-        client, err := newClientWith(hostmock.Config{
-            ExpectedNamespace:  sdk.DefaultNamespace,
-            ExpectedCapability: "httpclient",
-            ExpectedFunction:   "call",
-            Response:           func() []byte { r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}; b,_ := pb.Marshal(r); return b },
-            PayloadValidator:   baselineValidator(http.MethodHead, "http://example.com", nil),
-        })
-        if err != nil { t.Fatalf("client: %v", err) }
-        req, err := NewRequest(http.MethodHead, "http://example.com", nil)
-        if err != nil { t.Fatalf("new request: %v", err) }
-        resp, err := client.Do(req)
-        if err != nil { t.Fatalf("do: %v", err) }
-        if resp.Body != nil { t.Fatalf("expected no body for HEAD, got non-nil") }
-    })
+	t.Run("Do HEAD no response body", func(t *testing.T) {
+		client, err := newClientWith(hostmock.Config{
+			ExpectedNamespace:  sdk.DefaultNamespace,
+			ExpectedCapability: "httpclient",
+			ExpectedFunction:   "call",
+			Response: func() []byte {
+				r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
+				b, _ := pb.Marshal(r)
+				return b
+			},
+			PayloadValidator: baselineValidator(http.MethodHead, "http://example.com", nil),
+		})
+		if err != nil {
+			t.Fatalf("client: %v", err)
+		}
+		req, err := NewRequest(http.MethodHead, "http://example.com", nil)
+		if err != nil {
+			t.Fatalf("new request: %v", err)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("do: %v", err)
+		}
+		if resp.Body != nil {
+			t.Fatalf("expected no body for HEAD, got non-nil")
+		}
+	})
 }

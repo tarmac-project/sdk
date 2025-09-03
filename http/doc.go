@@ -7,4 +7,3 @@ method for custom requests. Errors use sentinel values combined with the
 underlying cause and can be checked with errors.Is.
 */
 package http
-

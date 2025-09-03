@@ -1,112 +1,78 @@
-# Tarmac SDK v2
+# Tarmac SDK (Go) 🛠️
 
-This is the official SDK for developing WebAssembly functions for [Tarmac](https://github.com/tarmac-project/tarmac).
+**A tiny, testable Go SDK for Tarmac WebAssembly functions.**
 
-## Features
+[![Go Version](https://img.shields.io/github/go-mod/go-version/madflojo/sdk)](https://github.com/madflojo/sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/tarmac-project/sdk.svg)](https://pkg.go.dev/github.com/tarmac-project/sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tarmac-project/sdk)](https://goreportcard.com/report/github.com/tarmac-project/sdk)
+[![Tests](https://github.com/madflojo/sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/tests.yml)
+[![Lint](https://github.com/madflojo/sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/lint.yml)
+[![Codecov](https://codecov.io/gh/madflojo/sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/madflojo/sdk)
 
-- **Modular Design**: Import only the components you need
-- **Simplified Mocking**: Each component has its own mock package for testing
-- **Protocol Buffer Based**: Efficient binary serialization for host communication
-- **WebAssembly First**: Built specifically for the WebAssembly environment
+---
 
-## Components
+## 🧠 What is Tarmac SDK (Go)?
 
-The SDK is divided into several modules, each with its own purpose:
+A minimal Go library for building Tarmac guest functions.
 
-- **sdk**: Core package for function registration
-- **http**: HTTP client for making external requests
-- **kv**: Key-value store for data persistence
-- **log**: Structured logging capabilities
-- **metrics**: Metrics reporting and monitoring
-- **function**: Call other Tarmac functions
-- **sql**: SQL database integration
+A key feature of this SDK is its testability.
+You can use the included mock clients or create your own.
+You can also use the low-level hostmock to simulate hostcalls to Tarmac if you want to get really deep into testing.
 
-## Getting Started
+---
 
-To use the SDK in your project, import the components you need:
+## 🚀 Getting Started
+
+Register your handler with the SDK:
 
 ```go
+package main
+
 import (
-    "github.com/tarmac-project/sdk"
-    "github.com/tarmac-project/sdk/http"
-    "github.com/tarmac-project/sdk/log"
+  "github.com/tarmac-project/sdk"
 )
 
 func main() {
-    // Register your function handler
-    sdk.Register(sdk.Config{
-        Namespace: "my-service",
-        Handler: myHandler,
-    })
-}
-
-func myHandler(payload []byte) ([]byte, error) {
-    // Create components with same namespace
-    logger := log.New(log.Config{Namespace: "my-service"})
-    client := http.New(http.Config{Namespace: "my-service"})
-    
-    logger.Info("Processing request")
-    
-    // Make HTTP requests
-    resp, err := client.Get("https://example.com")
-    if err != nil {
-        logger.Error("Failed to make request: %v", err)
-        return nil, err
-    }
-    
-    // Process response...
-    return []byte("Success!"), nil
+  _, err := sdk.New(sdk.Config{
+    Namespace: "tarmac", // optional; defaults to "tarmac"
+    Handler: func(b []byte) ([]byte, error) {
+      // Your function logic here
+      return b, nil
+    },
+  })
+  if err != nil {
+    panic(err)
+  }
 }
 ```
 
-## Testing with Mocks
+---
 
-Each component package includes a `mock` subpackage for testing:
+## 🧱 Structure
 
-```go
-import (
-    "github.com/tarmac-project/sdk/http/mock"
-)
+The project is organized into focused modules so you can depend only on what you need.
 
-func TestMyFunction(t *testing.T) {
-    // Create a mock HTTP client
-    mockClient := mock.New(mock.Config{
-        DefaultResponse: &mock.Response{
-            StatusCode: 200,
-            Status: "OK",
-            Body: []byte(`{"success":true}`),
-        },
-    })
-    
-    // Configure specific endpoint responses
-    mockClient.On("GET", "https://example.com").Return(&mock.Response{
-        StatusCode: 200,
-        Status: "OK",
-        Body: []byte(`{"data":"example"}`),
-    })
-    
-    // Call your function with the mock client
-    result := myFunctionUnderTest(mockClient)
-    
-    // Assert on the result
-    // ...
-}
-```
+| Module/Path   | Description                                        | Docs                                                      |
+| ------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `sdk`         | Core runtime config and handler registration  | https://pkg.go.dev/github.com/tarmac-project/sdk          |
+| `sdk/http`    | HTTP client      | https://pkg.go.dev/github.com/tarmac-project/sdk/http     |
+| `sdk/http/mock` | Lightweight HTTP client mock for tests           | https://pkg.go.dev/github.com/tarmac-project/sdk/http/mock |
+| `sdk/hostmock` | Low-level host-call simulator for assertions | https://pkg.go.dev/github.com/tarmac-project/sdk/hostmock |
 
-## Building
+---
 
-To build and test the SDK, use the provided Makefiles:
+## 🤝 Contributing
 
-```bash
-# Build all components
-make build
+PRs welcome! Please open an issue to discuss changes.
 
-# Run tests for all components
-make tests
+---
 
-# Format code
-make format
+## 📄 License
 
-# Lint code
-make lint
-```
+Apache-2.0 — see [LICENSE](LICENSE).
+
+---
+
+## 🌴 Stay Tiny, Ship Fast!
+
+Questions, ideas, or rough edges? Open an issue or PR — we’d love to hear from you.

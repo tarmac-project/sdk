@@ -36,50 +36,50 @@ type Client interface {
 }
 
 type Config struct {
-	SDKConfig sdk.RuntimeConfig
+	SDKConfig          sdk.RuntimeConfig
 	InsecureSkipVerify bool
-	HostCall func(string, string, string, []byte) ([]byte, error)
+	HostCall           func(string, string, string, []byte) ([]byte, error)
 }
 
 // httpClient implements Client using waPC host calls.
 type httpClient struct {
-    // cfg holds client configuration, including SDKConfig and TLS behavior.
-    cfg      Config
-    // hostCall performs the waPC invocation; tests may override it.
-    hostCall func(string, string, string, []byte) ([]byte, error)
+	// cfg holds client configuration, including SDKConfig and TLS behavior.
+	cfg Config
+	// hostCall performs the waPC invocation; tests may override it.
+	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
 // Response represents an HTTP response returned by the host.
 type Response struct {
-    // Status is the HTTP status text (e.g., "OK").
-    Status     string
-    // StatusCode is the numeric HTTP status code (e.g., 200).
-    StatusCode int
-    // Header contains response headers. Nil is treated as empty.
-    Header     http.Header
-    // Body is the response payload stream. It may be nil for empty bodies.
-    Body       io.ReadCloser
+	// Status is the HTTP status text (e.g., "OK").
+	Status string
+	// StatusCode is the numeric HTTP status code (e.g., 200).
+	StatusCode int
+	// Header contains response headers. Nil is treated as empty.
+	Header http.Header
+	// Body is the response payload stream. It may be nil for empty bodies.
+	Body io.ReadCloser
 }
 
 // Request represents an HTTP request to be sent by the client.
 type Request struct {
-    // Method is the HTTP method (e.g., GET, POST).
-    Method string
-    // URL is the full request URL; Host must be non-empty.
-    URL    *url.URL
-    // Header holds request headers. Nil is treated as empty.
-    Header http.Header
-    // Body is an optional request body stream.
-    Body   io.ReadCloser
+	// Method is the HTTP method (e.g., GET, POST).
+	Method string
+	// URL is the full request URL; Host must be non-empty.
+	URL *url.URL
+	// Header holds request headers. Nil is treated as empty.
+	Header http.Header
+	// Body is an optional request body stream.
+	Body io.ReadCloser
 }
 
 var (
-	ErrInvalidURL = errors.New("invalid URL provided")
-	ErrMarshalRequest = errors.New("failed to create request")
-	ErrReadBody = errors.New("failed to read request body")
+	ErrInvalidURL        = errors.New("invalid URL provided")
+	ErrMarshalRequest    = errors.New("failed to create request")
+	ErrReadBody          = errors.New("failed to read request body")
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
-	ErrHostCall = errors.New("host call failed")
-	ErrInvalidMethod = errors.New("invalid HTTP method")
+	ErrHostCall          = errors.New("host call failed")
+	ErrInvalidMethod     = errors.New("invalid HTTP method")
 )
 
 // New creates a new HTTP client with the provided configuration.

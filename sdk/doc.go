@@ -7,4 +7,3 @@ shared by capability clients (e.g., HTTP, KV). DefaultNamespace is used when a
 namespace is not explicitly provided.
 */
 package sdk
-

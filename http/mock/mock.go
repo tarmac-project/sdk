@@ -1,12 +1,12 @@
 package mock
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
-	sdk "github.com/tarmac-project/sdk/http"
+	sdkhttp "github.com/tarmac-project/sdk/http"
 )
 
 type MockClient struct {
@@ -73,13 +73,13 @@ func (m *MockClient) responseFor(method, url string) *Response {
 	return m.DefaultResponse
 }
 
-// toSDKResponse converts a mock Response into an sdk.Response with copied headers.
-func toSDKResponse(r *Response) *sdk.Response {
-	resp := &sdk.Response{
+// toSDKResponse converts a mock Response into an sdkhttp.Response with copied headers.
+func toSDKResponse(r *Response) *sdkhttp.Response {
+	resp := &sdkhttp.Response{
 		StatusCode: r.StatusCode,
 		Status:     r.Status,
 		Header:     make(http.Header),
-		Body:       io.NopCloser(strings.NewReader(string(r.Body))),
+		Body:       io.NopCloser(bytes.NewReader(r.Body)),
 	}
 	if r.Header != nil {
 		for k, values := range r.Header {
@@ -111,7 +111,7 @@ func (m *MockClient) On(method, url string) *ResponseBuilder {
 	}
 }
 
-func (m *MockClient) Get(url string) (*sdk.Response, error) {
+func (m *MockClient) Get(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "GET",
 		URL:    url,
@@ -124,7 +124,7 @@ func (m *MockClient) Get(url string) (*sdk.Response, error) {
 	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdk.Response, error) {
+func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(body)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdk.Respons
 	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdk.Response, error) {
+func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(body)
 	if err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdk.Response
 	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Delete(url string) (*sdk.Response, error) {
+func (m *MockClient) Delete(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "DELETE",
 		URL:    url,
@@ -181,7 +181,7 @@ func (m *MockClient) Delete(url string) (*sdk.Response, error) {
 	return toSDKResponse(resp), nil
 }
 
-func (m *MockClient) Do(req *sdk.Request) (*sdk.Response, error) {
+func (m *MockClient) Do(req *sdkhttp.Request) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(req.Body)
 	if err != nil {
 		return nil, err
@@ -200,6 +200,9 @@ func (m *MockClient) Do(req *sdk.Request) (*sdk.Response, error) {
 	}
 	return toSDKResponse(resp), nil
 }
+
+// Compile-time check: ensure MockClient implements the sdkhttp.Client interface.
+var _ sdkhttp.Client = (*MockClient)(nil)
 
 // ResponseBuilder helps configure a response for a specific method and URL.
 type ResponseBuilder struct {

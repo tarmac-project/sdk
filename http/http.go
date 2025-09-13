@@ -75,8 +75,8 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 	}
 
 	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
+	if unmarshalErr := pb.Unmarshal(resp, &r); unmarshalErr != nil {
+		return &Response{}, errors.Join(ErrUnmarshalResponse, unmarshalErr)
 	}
 
 	out := &Response{
@@ -117,7 +117,6 @@ type Request struct {
 	Body io.ReadCloser
 }
 
-//nolint:gochecknoglobals // sentinel errors are package-level by design
 var (
 	// ErrInvalidURL indicates a malformed or unsupported URL.
 	ErrInvalidURL = errors.New("invalid URL provided")

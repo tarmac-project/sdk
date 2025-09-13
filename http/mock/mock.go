@@ -9,33 +9,48 @@ import (
 	sdkhttp "github.com/tarmac-project/sdk/http"
 )
 
+// MockClient implements sdkhttp.Client with configurable responses and call
+// recording for tests. It never performs network I/O.
 type MockClient struct {
-	// responses maps method+url to predefined responses
+	// responses maps "METHOD URL" keys to predefined responses.
 	responses map[string]*Response
 
-	// DefaultResponse is returned when no matching response is found
+	// DefaultResponse is returned when no method/URL-specific response exists.
 	DefaultResponse *Response
 
-	// Calls tracks which endpoints were called
+	// Calls records each request observed by the mock client.
 	Calls []Call
 }
 
+// Response describes a synthetic HTTP response used by the mock.
 type Response struct {
+	// StatusCode is the HTTP status code to return.
 	StatusCode int
-	Status     string
-	Body       []byte
-	Header     http.Header
-	Error      error
+	// Status is the HTTP status text to return.
+	Status string
+	// Body is the raw payload returned to callers.
+	Body []byte
+	// Header holds headers to include in the response.
+	Header http.Header
+	// Error, when set, is returned instead of a successful response.
+	Error error
 }
 
+// Call captures a single client operation issued through the mock.
 type Call struct {
+	// Method is the HTTP method used.
 	Method string
-	URL    string
-	Body   []byte
+	// URL is the requested URL string.
+	URL string
+	// Body contains the request body, if provided.
+	Body []byte
+	// Header holds request headers passed by the caller.
 	Header http.Header
 }
 
+// Config controls construction of a MockClient.
 type Config struct {
+	// DefaultResponse is used when no specific response has been configured.
 	DefaultResponse *Response
 }
 
@@ -103,6 +118,8 @@ func readAll(r io.Reader) ([]byte, error) {
 	return b, nil
 }
 
+// On starts configuration of a response for a given method and URL.
+// It returns a builder used to define the returned response or error.
 func (m *MockClient) On(method, url string) *ResponseBuilder {
 	key := method + " " + url
 	return &ResponseBuilder{
@@ -111,6 +128,7 @@ func (m *MockClient) On(method, url string) *ResponseBuilder {
 	}
 }
 
+// Get records and returns the configured response for a GET request.
 func (m *MockClient) Get(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "GET",
@@ -124,6 +142,7 @@ func (m *MockClient) Get(url string) (*sdkhttp.Response, error) {
 	return toSDKResponse(resp), nil
 }
 
+// Post records and returns the configured response for a POST request.
 func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(body)
 	if err != nil {
@@ -146,6 +165,7 @@ func (m *MockClient) Post(url, contentType string, body io.Reader) (*sdkhttp.Res
 	return toSDKResponse(resp), nil
 }
 
+// Put records and returns the configured response for a PUT request.
 func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(body)
 	if err != nil {
@@ -168,6 +188,7 @@ func (m *MockClient) Put(url, contentType string, body io.Reader) (*sdkhttp.Resp
 	return toSDKResponse(resp), nil
 }
 
+// Delete records and returns the configured response for a DELETE request.
 func (m *MockClient) Delete(url string) (*sdkhttp.Response, error) {
 	m.Calls = append(m.Calls, Call{
 		Method: "DELETE",
@@ -181,6 +202,7 @@ func (m *MockClient) Delete(url string) (*sdkhttp.Response, error) {
 	return toSDKResponse(resp), nil
 }
 
+// Do records and returns the configured response for an arbitrary request.
 func (m *MockClient) Do(req *sdkhttp.Request) (*sdkhttp.Response, error) {
 	bodyBytes, err := readAll(req.Body)
 	if err != nil {

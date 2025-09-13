@@ -192,7 +192,7 @@ func TestHTTPClient(t *testing.T) {
 				&Request{
 					Method: http.MethodPost,
 					URL:    testurl.URLHTTPS(),
-					Body:   io.NopCloser(iotest.ErrReader(TestErrBadReader)),
+					Body:   io.NopCloser(iotest.ErrReader(ErrTestBadReader)),
 				},
 				ErrReadBody,
 			},

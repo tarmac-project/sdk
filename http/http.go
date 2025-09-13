@@ -310,7 +310,7 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 func (c *httpClient) Delete(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
-	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if err != nil || u == nil || u.Host == "" {
 		return nil, ErrInvalidURL
 	}
 

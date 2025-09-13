@@ -13,14 +13,21 @@
 version: "2"
 
 run:
-  # Skip test files to keep lints focused on library code. Tests are validated by `make tests`.
-  tests: false
+  tests: true
 
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
   # Default: 3
   max-same-issues: 50
+  exclude-rules:
+    # Allow complex/long functions in tests; we validate behavior via unit tests.
+    - path: _test\.go
+      linters:
+        - gocognit
+        - gocyclo
+        - funlen
+        - testpackage
 
 formatters:
   enable:

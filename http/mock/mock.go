@@ -60,7 +60,7 @@ func New(config Config) *MockClient {
 	defaultResp := config.DefaultResponse
 	if defaultResp == nil {
 		defaultResp = &Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Status:     "OK",
 			Body:       []byte(`{"status":"success"}`),
 			Header:     make(http.Header),

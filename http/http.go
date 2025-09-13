@@ -14,6 +14,8 @@ import (
 )
 
 // validMethods lists HTTP methods accepted by NewRequest.
+//
+//nolint:gochecknoglobals // required for method validation in NewRequest
 var validMethods = map[string]bool{
 	http.MethodGet:     true,
 	http.MethodHead:    true,
@@ -83,6 +85,7 @@ type Request struct {
 	Body io.ReadCloser
 }
 
+//nolint:gochecknoglobals // sentinel errors are package-level by design
 var (
 	// ErrInvalidURL indicates a malformed or unsupported URL.
 	ErrInvalidURL = errors.New("invalid URL provided")

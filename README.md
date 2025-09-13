@@ -1,2 +1,78 @@
-# sdk
-Go SDK for Tarmac Functions
+# Tarmac SDK (Go) 🛠️
+
+**A tiny, testable Go SDK for Tarmac WebAssembly functions.**
+
+[![Go Version](https://img.shields.io/github/go-mod/go-version/madflojo/sdk)](https://github.com/madflojo/sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/tarmac-project/sdk.svg)](https://pkg.go.dev/github.com/tarmac-project/sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tarmac-project/sdk)](https://goreportcard.com/report/github.com/tarmac-project/sdk)
+[![Tests](https://github.com/madflojo/sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/tests.yml)
+[![Lint](https://github.com/madflojo/sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/lint.yml)
+[![Codecov](https://codecov.io/gh/madflojo/sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/madflojo/sdk)
+
+---
+
+## 🧠 What is Tarmac SDK (Go)?
+
+A minimal Go library for building Tarmac guest functions.
+
+A key feature of this SDK is its testability.
+You can use the included mock clients or create your own.
+You can also use the low-level hostmock to simulate hostcalls to Tarmac if you want to get really deep into testing.
+
+---
+
+## 🚀 Getting Started
+
+Register your handler with the SDK:
+
+```go
+package main
+
+import (
+  "github.com/tarmac-project/sdk"
+)
+
+func main() {
+  _, err := sdk.New(sdk.Config{
+    Namespace: "tarmac", // optional; defaults to "tarmac"
+    Handler: func(b []byte) ([]byte, error) {
+      // Your function logic here
+      return b, nil
+    },
+  })
+  if err != nil {
+    panic(err)
+  }
+}
+```
+
+---
+
+## 🧱 Structure
+
+The project is organized into focused modules so you can depend only on what you need.
+
+| Module/Path   | Description                                        | Docs                                                      |
+| ------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `sdk`         | Core runtime config and handler registration  | https://pkg.go.dev/github.com/tarmac-project/sdk          |
+| `sdk/http`    | HTTP client      | https://pkg.go.dev/github.com/tarmac-project/sdk/http     |
+| `sdk/http/mock` | Lightweight HTTP client mock for tests           | https://pkg.go.dev/github.com/tarmac-project/sdk/http/mock |
+| `sdk/hostmock` | Low-level host-call simulator for assertions | https://pkg.go.dev/github.com/tarmac-project/sdk/hostmock |
+
+---
+
+## 🤝 Contributing
+
+PRs welcome! Please open an issue to discuss changes.
+
+---
+
+## 📄 License
+
+Apache-2.0 — see [LICENSE](LICENSE).
+
+---
+
+## 🌴 Stay Tiny, Ship Fast!
+
+Questions, ideas, or rough edges? Open an issue or PR — we’d love to hear from you.

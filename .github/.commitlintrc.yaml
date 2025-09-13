@@ -5,4 +5,4 @@ rules:
   header-max-length: [0, 'always', 100]
   footer-max-line-length: [0, 'always', 100]
   scope-case: [2, 'always', 'lower-case']
-  subject-case: [2, 'always', ['lower-case']]
+  subject-case: [0, 'always', ['lower-case']]

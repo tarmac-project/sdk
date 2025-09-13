@@ -12,6 +12,10 @@
 
 version: "2"
 
+run:
+  # Skip test files to keep lints focused on library code. Tests are validated by `make tests`.
+  tests: false
+
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.

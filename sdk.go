@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	"fmt"
+	"errors"
 
 	wapc "github.com/wapc/wapc-guest-tinygo"
 )
@@ -11,7 +11,7 @@ const DefaultNamespace = "tarmac"
 
 var (
 	// ErrHandlerNil is returned when the provided function handler is nil.
-	ErrHandlerNil = fmt.Errorf("function handler cannot be nil")
+	ErrHandlerNil = errors.New("function handler cannot be nil")
 )
 
 // Config provides configuration options for SDK initialization.

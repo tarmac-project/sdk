@@ -18,7 +18,7 @@ import (
 	"github.com/madflojo/testlazy/things/testurl"
 )
 
-var TestErrBadReader = fmt.Errorf("bad reader error")
+var ErrTestBadReader = fmt.Errorf("bad reader error")
 
 type InterfaceTestCase struct {
 	name        string
@@ -76,8 +76,8 @@ func TestHTTPClient(t *testing.T) {
 				"POST",
 				"http://example.com",
 				"text/plain",
-				iotest.ErrReader(TestErrBadReader),
-				TestErrBadReader,
+				iotest.ErrReader(ErrTestBadReader),
+				ErrTestBadReader,
 			},
 			{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
 			{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
@@ -88,8 +88,8 @@ func TestHTTPClient(t *testing.T) {
 				"PUT",
 				"http://example.com",
 				"text/plain",
-				iotest.ErrReader(TestErrBadReader),
-				TestErrBadReader,
+				iotest.ErrReader(ErrTestBadReader),
+				ErrTestBadReader,
 			},
 			{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
 			{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
@@ -97,7 +97,6 @@ func TestHTTPClient(t *testing.T) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				var (
 					resp *Response
@@ -121,7 +120,7 @@ func TestHTTPClient(t *testing.T) {
 				}
 
 				// If we hit the bad reader path, also ensure ErrReadBody is present
-				if err != nil && errors.Is(err, TestErrBadReader) && !errors.Is(err, ErrReadBody) {
+				if err != nil && errors.Is(err, ErrTestBadReader) && !errors.Is(err, ErrReadBody) {
 					t.Fatalf("expected ErrReadBody in error chain, got %v", err)
 				}
 
@@ -155,7 +154,6 @@ func TestHTTPClient(t *testing.T) {
 			{"Nil Body", "PATCH", "http://example.com", nil, nil},
 		}
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				_, err := NewRequest(tc.method, tc.url, tc.body)
 				if !errors.Is(err, tc.expectedErr) {
@@ -201,7 +199,6 @@ func TestHTTPClient(t *testing.T) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				resp, err := client.Do(tc.request)
 				if err != nil || !errors.Is(err, tc.expectedErr) {

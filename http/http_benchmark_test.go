@@ -58,7 +58,7 @@ func BenchmarkHTTPClient(b *testing.B) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
+
 			b.Run(tc.name, func(b *testing.B) {
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
@@ -130,7 +130,7 @@ func BenchmarkHTTPClient(b *testing.B) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
+
 			b.Run(tc.name, func(b *testing.B) {
 				hdrKeys := buildHeaderKeys(tc.headerCount)
 				b.ResetTimer()

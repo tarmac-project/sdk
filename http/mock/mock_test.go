@@ -19,7 +19,7 @@ func TestMockClient(t *testing.T) {
 			t.Fatal("Expected default response to be set")
 		}
 
-		if client.DefaultResponse.StatusCode != 200 {
+		if client.DefaultResponse.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", client.DefaultResponse.StatusCode)
 		}
 
@@ -65,7 +65,7 @@ func TestMockClient(t *testing.T) {
 			t.Fatal("Response not stored for key:", key)
 		}
 
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 
@@ -196,7 +196,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 201 {
+		if resp.StatusCode != http.StatusCreated {
 			t.Errorf("Expected status code 201, got %d", resp.StatusCode)
 		}
 
@@ -239,7 +239,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 
@@ -277,7 +277,7 @@ func TestMockClient(t *testing.T) {
 			t.Fatalf("Expected 1 call, got %d", len(client.Calls))
 		}
 
-		if client.Calls[0].Method != "DELETE" {
+		if client.Calls[0].Method != http.MethodDelete {
 			t.Errorf("Expected method DELETE, got %s", client.Calls[0].Method)
 		}
 	})
@@ -307,7 +307,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 
@@ -316,7 +316,7 @@ func TestMockClient(t *testing.T) {
 			t.Fatalf("Expected 1 call, got %d", len(client.Calls))
 		}
 
-		if client.Calls[0].Method != "PATCH" {
+		if client.Calls[0].Method != http.MethodPatch {
 			t.Errorf("Expected method PATCH, got %s", client.Calls[0].Method)
 		}
 
@@ -388,7 +388,7 @@ func TestResponseWithHeaders(t *testing.T) {
 		Header: http.Header{
 			"Content-Type":  []string{"application/json"},
 			"Cache-Control": []string{"no-cache"},
-			"X-API-Version": []string{"1.0"},
+			"X-Api-Version": []string{"1.0"},
 		},
 		Body: []byte(`{"header_test":true}`),
 	})
@@ -410,7 +410,7 @@ func TestResponseWithHeaders(t *testing.T) {
 		t.Errorf("Expected Cache-Control no-cache, got %s", cacheControl)
 	}
 
-	apiVersion := resp.Header.Get("X-API-Version")
+	apiVersion := resp.Header.Get("X-Api-Version")
 	if apiVersion != "1.0" {
 		t.Errorf("Expected X-API-Version 1.0, got %s", apiVersion)
 	}

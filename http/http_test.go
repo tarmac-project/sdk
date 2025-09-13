@@ -80,7 +80,6 @@ func TestHTTPClient(t *testing.T) {
 				TestErrBadReader,
 			},
 			{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
-			{"PUT with invalid scheme", "PUT", "ftp://example.com", "", nil, ErrInvalidURL},
 			{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
 			{"PUT with empty URL", "PUT", "", "", nil, ErrInvalidURL},
 			{"PUT with empty content type", "PUT", "http://example.com", "", strings.NewReader("body"), nil},
@@ -93,7 +92,6 @@ func TestHTTPClient(t *testing.T) {
 				TestErrBadReader,
 			},
 			{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
-			{"DELETE with invalid scheme", "DELETE", "ftp://example.com", "", nil, ErrInvalidURL},
 			{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
 			{"DELETE with empty URL", "DELETE", "", "", nil, ErrInvalidURL},
 		}

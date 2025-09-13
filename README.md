@@ -2,12 +2,12 @@
 
 **A tiny, testable Go SDK for Tarmac WebAssembly functions.**
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/madflojo/sdk)](https://github.com/madflojo/sdk)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/tarmac-project/sdk)](https://github.com/tarmac-project/sdk)
 [![Go Reference](https://pkg.go.dev/badge/github.com/tarmac-project/sdk.svg)](https://pkg.go.dev/github.com/tarmac-project/sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tarmac-project/sdk)](https://goreportcard.com/report/github.com/tarmac-project/sdk)
-[![Tests](https://github.com/madflojo/sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/tests.yml)
-[![Lint](https://github.com/madflojo/sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/madflojo/sdk/actions/workflows/lint.yml)
-[![Codecov](https://codecov.io/gh/madflojo/sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/madflojo/sdk)
+[![Tests](https://github.com/tarmac-project/sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/tarmac-project/sdk/actions/workflows/tests.yml)
+[![Lint](https://github.com/tarmac-project/sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/tarmac-project/sdk/actions/workflows/lint.yml)
+[![Codecov](https://codecov.io/gh/tarmac-project/sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/tarmac-project/sdk)
 
 ---
 

@@ -3,7 +3,6 @@ package hostmock
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"testing"
 )
 
@@ -18,7 +17,7 @@ type TestCase struct {
 	wantErr    error
 }
 
-var ErrMockError = fmt.Errorf("Mock error")
+var ErrMockError = errors.New("Mock error")
 
 func TestHostMock(t *testing.T) {
 	tt := []TestCase{
@@ -30,7 +29,7 @@ func TestHostMock(t *testing.T) {
 				ExpectedFunction:   "test",
 				Error:              nil,
 				Fail:               false,
-				PayloadValidator: func(payload []byte) error {
+				PayloadValidator: func(_ []byte) error {
 					return nil
 				},
 				Response: func() []byte {
@@ -52,7 +51,7 @@ func TestHostMock(t *testing.T) {
 				ExpectedFunction:   "test",
 				Error:              ErrMockError,
 				Fail:               true,
-				PayloadValidator: func(payload []byte) error {
+				PayloadValidator: func(_ []byte) error {
 					return nil
 				},
 				Response: func() []byte {
@@ -154,7 +153,7 @@ func TestHostMock(t *testing.T) {
 				ExpectedFunction:   "test",
 				Error:              nil,
 				Fail:               false,
-				PayloadValidator: func(payload []byte) error {
+				PayloadValidator: func(_ []byte) error {
 					return nil
 				},
 				Response: func() []byte {
@@ -175,7 +174,7 @@ func TestHostMock(t *testing.T) {
 				ExpectedFunction:   "test",
 				Error:              nil,
 				Fail:               false,
-				PayloadValidator: func(payload []byte) error {
+				PayloadValidator: func(_ []byte) error {
 					return nil
 				},
 				Response: func() []byte {
@@ -197,7 +196,7 @@ func TestHostMock(t *testing.T) {
 				ExpectedFunction:   "expected",
 				Error:              nil,
 				Fail:               false,
-				PayloadValidator: func(payload []byte) error {
+				PayloadValidator: func(_ []byte) error {
 					return nil
 				},
 				Response: func() []byte {

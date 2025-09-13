@@ -14,6 +14,8 @@ import (
 )
 
 // validMethods lists HTTP methods accepted by NewRequest.
+//
+//nolint:gochecknoglobals // required for method validation in NewRequest
 var validMethods = map[string]bool{
 	http.MethodGet:     true,
 	http.MethodHead:    true,
@@ -57,6 +59,38 @@ type httpClient struct {
 	cfg Config
 	// hostCall performs the waPC invocation; tests may override it.
 	hostCall func(string, string, string, []byte) ([]byte, error)
+}
+
+// doHTTPCall marshals the protobuf request, performs the host call, and
+// unmarshals the response into a Response using proto getters.
+func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
+	b, err := pb.Marshal(req)
+	if err != nil {
+		return &Response{}, errors.Join(ErrMarshalRequest, err)
+	}
+
+	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
+	if err != nil {
+		return &Response{}, errors.Join(ErrHostCall, err)
+	}
+
+	var r proto.HTTPClientResponse
+	if unmarshalErr := pb.Unmarshal(resp, &r); unmarshalErr != nil {
+		return &Response{}, errors.Join(ErrUnmarshalResponse, unmarshalErr)
+	}
+
+	out := &Response{
+		Status:     r.GetStatus().GetStatus(),
+		StatusCode: int(r.GetStatus().GetCode()),
+		Header:     make(http.Header),
+	}
+	for name, header := range r.GetHeaders() {
+		out.Header[name] = header.GetValues()
+	}
+	if body := r.GetBody(); len(body) > 0 {
+		out.Body = io.NopCloser(bytes.NewReader(body))
+	}
+	return out, nil
 }
 
 // Response represents an HTTP response returned by the host.
@@ -131,43 +165,7 @@ func (c *httpClient) Get(urlStr string) (*Response, error) {
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
 	}
-
-	// Marshal the request
-	b, err := pb.Marshal(req)
-	if err != nil {
-		return &Response{}, errors.Join(ErrMarshalRequest, err)
-	}
-
-	// Call the host
-	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
-	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
-	}
-
-	// Unmarshal the response
-	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
-	}
-
-	// Build the response object
-	response := &Response{
-		Status:     r.Status.Status,
-		StatusCode: int(r.Status.Code),
-		Header:     make(http.Header),
-	}
-
-	// Convert headers if present
-	for name, header := range r.Headers {
-		response.Header[name] = header.Values
-	}
-
-	// Add body if present
-	if len(r.Body) > 0 {
-		response.Body = io.NopCloser(bytes.NewReader(r.Body))
-	}
-
-	return response, nil
+	return c.doHTTPCall(req)
 }
 
 // Post issues a POST to the URL with the provided contentType and body.
@@ -194,48 +192,10 @@ func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
 		Headers: map[string]*proto.Header{
-			"Content-Type": {
-				Values: []string{contentType},
-			},
+			"Content-Type": {Values: []string{contentType}},
 		},
 	}
-
-	// Marshal the request
-	b, err := pb.Marshal(req)
-	if err != nil {
-		return &Response{}, errors.Join(ErrMarshalRequest, err)
-	}
-
-	// Make the host call
-	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
-	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
-	}
-
-	// Unmarshal the response
-	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
-	}
-
-	// Build the response object
-	response := &Response{
-		Status:     r.Status.Status,
-		StatusCode: int(r.Status.Code),
-		Header:     make(http.Header),
-	}
-
-	// Convert headers if present
-	for name, header := range r.Headers {
-		response.Header[name] = header.Values
-	}
-
-	// Add body if present
-	if len(r.Body) > 0 {
-		response.Body = io.NopCloser(bytes.NewReader(r.Body))
-	}
-
-	return response, nil
+	return c.doHTTPCall(req)
 }
 
 // Put issues a PUT to the URL with the provided contentType and body.
@@ -262,48 +222,10 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
 		Headers: map[string]*proto.Header{
-			"Content-Type": {
-				Values: []string{contentType},
-			},
+			"Content-Type": {Values: []string{contentType}},
 		},
 	}
-
-	// Marshal the request
-	b, err := pb.Marshal(req)
-	if err != nil {
-		return &Response{}, errors.Join(ErrMarshalRequest, err)
-	}
-
-	// Make the host call
-	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
-	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
-	}
-
-	// Unmarshal the response
-	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
-	}
-
-	// Build the response object
-	response := &Response{
-		Status:     r.Status.Status,
-		StatusCode: int(r.Status.Code),
-		Header:     make(http.Header),
-	}
-
-	// Convert headers if present
-	for name, header := range r.Headers {
-		response.Header[name] = header.Values
-	}
-
-	// Add body if present
-	if len(r.Body) > 0 {
-		response.Body = io.NopCloser(bytes.NewReader(r.Body))
-	}
-
-	return response, nil
+	return c.doHTTPCall(req)
 }
 
 // Delete issues a DELETE to the specified URL.
@@ -321,43 +243,7 @@ func (c *httpClient) Delete(urlStr string) (*Response, error) {
 		Insecure: c.cfg.InsecureSkipVerify,
 		Headers:  make(map[string]*proto.Header),
 	}
-
-	// Marshal the request
-	b, err := pb.Marshal(req)
-	if err != nil {
-		return &Response{}, errors.Join(ErrMarshalRequest, err)
-	}
-
-	// Make the host call
-	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
-	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
-	}
-
-	// Unmarshal the response
-	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
-	}
-
-	// Build the response object
-	response := &Response{
-		Status:     r.Status.Status,
-		StatusCode: int(r.Status.Code),
-		Header:     make(http.Header),
-	}
-
-	// Convert headers if present
-	for name, header := range r.Headers {
-		response.Header[name] = header.Values
-	}
-
-	// Add body if present
-	if len(r.Body) > 0 {
-		response.Body = io.NopCloser(bytes.NewReader(r.Body))
-	}
-
-	return response, nil
+	return c.doHTTPCall(req)
 }
 
 // Do issues a custom request built with NewRequest and returns the response.
@@ -393,42 +279,7 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 		}
 	}
 
-	// Marshal the request
-	b, err := pb.Marshal(pbReq)
-	if err != nil {
-		return &Response{}, errors.Join(ErrMarshalRequest, err)
-	}
-
-	// Make the host call
-	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
-	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
-	}
-
-	// Unmarshal the response
-	var r proto.HTTPClientResponse
-	if err := pb.Unmarshal(resp, &r); err != nil {
-		return &Response{}, errors.Join(ErrUnmarshalResponse, err)
-	}
-
-	// Build the response object
-	response := &Response{
-		Status:     r.Status.Status,
-		StatusCode: int(r.Status.Code),
-		Header:     make(http.Header),
-	}
-
-	// Convert headers if present
-	for name, header := range r.Headers {
-		response.Header[name] = header.Values
-	}
-
-	// Add body if present
-	if len(r.Body) > 0 {
-		response.Body = io.NopCloser(bytes.NewReader(r.Body))
-	}
-
-	return response, nil
+	return c.doHTTPCall(pbReq)
 }
 
 // NewRequest creates a new Request object to use with the Do method.

@@ -61,7 +61,7 @@ func TestSDK_Behavior(t *testing.T) {
 	// Create two SDK instances up front to cover multiple registrations
 	// and enable instance isolation checks.
 	h1 := func(b []byte) ([]byte, error) { return b, nil }
-	h2 := func(b []byte) ([]byte, error) { return nil, errors.New("boom") }
+	h2 := func(_ []byte) ([]byte, error) { return nil, errors.New("boom") }
 
 	s1, err := New(Config{Namespace: "one", Handler: h1})
 	if err != nil {
@@ -81,7 +81,7 @@ func TestSDK_Behavior(t *testing.T) {
 
 	t.Run("Config_Immutability", func(t *testing.T) {
 		got := s1.Config()
-		got.Namespace = "mutated"
+		got.Namespace = "mutated" //nolint:govet,unusedwrite // verify Config() returns a copy
 		if s1.Config().Namespace != "one" {
 			t.Fatalf("expected SDK namespace to remain 'one', got %q", s1.Config().Namespace)
 		}

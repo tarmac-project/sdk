@@ -1,7 +1,7 @@
 package mock
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -30,7 +30,7 @@ func TestMockClient(t *testing.T) {
 
 	t.Run("New with custom response", func(t *testing.T) {
 		customResp := &Response{
-			StatusCode: 201,
+			StatusCode: http.StatusCreated,
 			Status:     "Created",
 			Body:       []byte(`{"id":123}`),
 		}
@@ -39,7 +39,7 @@ func TestMockClient(t *testing.T) {
 			DefaultResponse: customResp,
 		})
 
-		if client.DefaultResponse.StatusCode != 201 {
+		if client.DefaultResponse.StatusCode != http.StatusCreated {
 			t.Errorf("Expected status code 201, got %d", client.DefaultResponse.StatusCode)
 		}
 
@@ -52,14 +52,14 @@ func TestMockClient(t *testing.T) {
 		client := New(Config{})
 
 		// Configure endpoint response
-		client.On("GET", "https://example.com/api").Return(&Response{
+		client.On(http.MethodGet, "https://example.com/api").Return(&Response{
 			StatusCode: 200,
 			Status:     "OK",
 			Body:       []byte(`{"data":"test"}`),
 		})
 
 		// Check if response is stored
-		key := "GET https://example.com/api"
+		key := http.MethodGet + " https://example.com/api"
 		resp, found := client.responses[key]
 		if !found {
 			t.Fatal("Response not stored for key:", key)
@@ -76,19 +76,19 @@ func TestMockClient(t *testing.T) {
 
 	t.Run("ReturnError", func(t *testing.T) {
 		client := New(Config{})
-		expectedErr := fmt.Errorf("connection refused")
+		expectedErr := errors.New("connection refused")
 
 		// Configure error response
-		client.On("GET", "https://example.com/error").ReturnError(expectedErr)
+		client.On(http.MethodGet, "https://example.com/error").ReturnError(expectedErr)
 
 		// Check if error is stored
-		key := "GET https://example.com/error"
+		key := http.MethodGet + " https://example.com/error"
 		resp, found := client.responses[key]
 		if !found {
 			t.Fatal("Response not stored for key:", key)
 		}
 
-		if resp.Error != expectedErr {
+		if !errors.Is(resp.Error, expectedErr) {
 			t.Errorf("Expected error %v, got %v", expectedErr, resp.Error)
 		}
 	})
@@ -108,7 +108,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 
@@ -117,7 +117,7 @@ func TestMockClient(t *testing.T) {
 			t.Fatalf("Expected 1 call, got %d", len(client.Calls))
 		}
 
-		if client.Calls[0].Method != "GET" {
+		if client.Calls[0].Method != http.MethodGet {
 			t.Errorf("Expected method GET, got %s", client.Calls[0].Method)
 		}
 
@@ -148,7 +148,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status code 200, got %d", resp.StatusCode)
 		}
 
@@ -159,7 +159,7 @@ func TestMockClient(t *testing.T) {
 
 	t.Run("GET with error", func(t *testing.T) {
 		client := New(Config{})
-		expectedErr := fmt.Errorf("connection refused")
+		expectedErr := errors.New("connection refused")
 
 		// Configure error response
 		client.On("GET", "https://example.com/error").ReturnError(expectedErr)
@@ -178,8 +178,8 @@ func TestMockClient(t *testing.T) {
 		client := New(Config{})
 
 		// Configure endpoint response
-		client.On("POST", "https://example.com/api").Return(&Response{
-			StatusCode: 201,
+		client.On(http.MethodPost, "https://example.com/api").Return(&Response{
+			StatusCode: http.StatusCreated,
 			Status:     "Created",
 			Body:       []byte(`{"id":123}`),
 		})
@@ -268,7 +268,7 @@ func TestMockClient(t *testing.T) {
 		}
 
 		// Verify response
-		if resp.StatusCode != 204 {
+		if resp.StatusCode != http.StatusNoContent {
 			t.Errorf("Expected status code 204, got %d", resp.StatusCode)
 		}
 
@@ -333,7 +333,7 @@ func TestMockClient(t *testing.T) {
 		client := New(Config{})
 
 		// Configure error response
-		client.On("GET", "https://example.com/error").ReturnError(fmt.Errorf("timeout"))
+		client.On(http.MethodGet, "https://example.com/error").ReturnError(errors.New("timeout"))
 
 		// Create request
 		req, err := sdkhttp.NewRequest("GET", "https://example.com/error", nil)
@@ -382,7 +382,7 @@ func TestResponseWithHeaders(t *testing.T) {
 	client := New(Config{})
 
 	// Configure response with headers
-	client.On("GET", "https://example.com/headers").Return(&Response{
+	client.On(http.MethodGet, "https://example.com/headers").Return(&Response{
 		StatusCode: 200,
 		Status:     "OK",
 		Header: http.Header{
@@ -420,7 +420,7 @@ func TestInvalidRequestBody(t *testing.T) {
 	client := New(Config{})
 
 	// Create a reader that will fail on Read
-	failingReader := &FailingReader{err: fmt.Errorf("read error")}
+	failingReader := &FailingReader{err: errors.New("read error")}
 
 	// Test POST with failing reader
 	_, err := client.Post("https://example.com", "application/json", failingReader)
@@ -446,11 +446,11 @@ func TestInvalidRequestBody(t *testing.T) {
 	}
 }
 
-// FailingReader is a mock io.Reader that always returns an error
+// FailingReader is a mock io.Reader that always returns an error.
 type FailingReader struct {
 	err error
 }
 
-func (f *FailingReader) Read(p []byte) (n int, err error) {
+func (f *FailingReader) Read(_ []byte) (int, error) {
 	return 0, f.err
 }

@@ -142,7 +142,6 @@ func TestHTTPClientHostMock_HappyPaths(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			var bodyReader io.Reader
 			var bodyBytes []byte
@@ -220,14 +219,13 @@ func TestHTTPClientHostMock_HostFailures(t *testing.T) {
 		{"Do PATCH fail", http.MethodPatch, "http://example.com/a", "application/json", `{}`},
 	}
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			mockCfg := hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
 				ExpectedCapability: "httpclient",
 				ExpectedFunction:   "call",
 				Fail:               true,
-				Error:              fmt.Errorf("host call failed"),
+				Error:              errors.New("host call failed"),
 			}
 			client, err := newClientWith(mockCfg)
 			if err != nil {
@@ -252,7 +250,6 @@ func TestHTTPClientHostMock_UnmarshalFailures(t *testing.T) {
 		{"POST bad protobuf", http.MethodPost, "http://example.com/x"},
 	}
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			mockCfg := hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
@@ -290,7 +287,6 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 		{"404 NotFound", 404, "Not Found", "http://example.com/missing"},
 	}
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			resp := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: tc.status, Code: int32(tc.code)}}
 			b, _ := pb.Marshal(resp)
@@ -354,8 +350,8 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new: %v", err)
 	}
-	if _, err := c.Get("http://example.com"); err != nil {
-		t.Fatalf("get: %v", err)
+	if _, gerr := c.Get("http://example.com"); gerr != nil {
+		t.Fatalf("get: %v", gerr)
 	}
 	_ = client // silence unused variable in case of future expansion
 }
@@ -380,7 +376,6 @@ func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-
 		t.Run(tc.name, func(t *testing.T) {
 			client, err := newClientWith(hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,

@@ -466,6 +466,9 @@ linters:
           - dupl
           - errcheck
           - funlen
+          - gocyclo
+          - gocognit
+          - cyclop
           - goconst
           - gosec
           - noctx

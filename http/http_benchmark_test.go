@@ -58,28 +58,27 @@ func BenchmarkHTTPClient(b *testing.B) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			b.Run(tc.name, func(b *testing.B) {
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					var (
-						r   *Response
-						err error
+						r     *Response
+						opErr error
 					)
 					switch tc.method {
 					case "GET":
-						r, err = c.Get(tc.url)
+						r, opErr = c.Get(tc.url)
 					case "POST":
 						rd := strings.NewReader(tc.body)
-						r, err = c.Post(tc.url, tc.contentType, rd)
+						r, opErr = c.Post(tc.url, tc.contentType, rd)
 					case "PUT":
 						rd := strings.NewReader(tc.body)
-						r, err = c.Put(tc.url, tc.contentType, rd)
+						r, opErr = c.Put(tc.url, tc.contentType, rd)
 					case "DELETE":
-						r, err = c.Delete(tc.url)
+						r, opErr = c.Delete(tc.url)
 					}
-					if err != nil {
-						b.Fatalf("%s failed: %v", tc.name, err)
+					if opErr != nil {
+						b.Fatalf("%s failed: %v", tc.name, opErr)
 					}
 					if r.Body != nil {
 						io.Copy(io.Discard, r.Body)
@@ -103,7 +102,7 @@ func BenchmarkHTTPClient(b *testing.B) {
 				return nil
 			}
 			keys := make([]string, n)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				keys[i] = "X-Bench-H-" + strconv.Itoa(i)
 			}
 			return keys
@@ -130,18 +129,17 @@ func BenchmarkHTTPClient(b *testing.B) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			b.Run(tc.name, func(b *testing.B) {
 				hdrKeys := buildHeaderKeys(tc.headerCount)
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					var body io.Reader
 					if tc.payload != nil {
 						body = bytes.NewReader(tc.payload)
 					}
-					req, err := NewRequest(tc.method, tc.url, body)
-					if err != nil {
-						b.Fatalf("new request: %v", err)
+					req, reqErr := NewRequest(tc.method, tc.url, body)
+					if reqErr != nil {
+						b.Fatalf("new request: %v", reqErr)
 					}
 					if tc.contentType != "" {
 						req.Header.Set("Content-Type", tc.contentType)
@@ -150,9 +148,9 @@ func BenchmarkHTTPClient(b *testing.B) {
 					for _, k := range hdrKeys {
 						req.Header.Set(k, "v")
 					}
-					r, err := c.Do(req)
-					if err != nil {
-						b.Fatalf("%s failed: %v", tc.name, err)
+					r, runErr := c.Do(req)
+					if runErr != nil {
+						b.Fatalf("%s failed: %v", tc.name, runErr)
 					}
 					if r.Body != nil {
 						io.Copy(io.Discard, r.Body)

@@ -1,8 +1,8 @@
 /*
 Package hostmock provides a friendly pretend host for waPC calls.
 
-It’s designed primarily for SDK development and advanced tests where you want
-to validate exactly what a component is sending to the Tarmac host—without
+It's designed primarily for SDK development and advanced tests where you want
+to validate exactly what a component is sending to the Tarmac host-without
 needing a real host running. No real hosts were harmed in the making of these tests.
 
 Why use hostmock?
@@ -18,7 +18,7 @@ Most users writing functions should prefer component-level mocks:
   - github.com/tarmac-project/sdk/http/mock
   - github.com/tarmac-project/sdk/kv/mock
 
-They’re simpler and avoid coupling your tests to the wire format. Reach for
+They're simpler and avoid coupling your tests to the wire format. Reach for
 hostmock when you need to assert the waPC payloads or validate capability routing.
 
 Quick start
@@ -48,7 +48,7 @@ Behavior
 Tips
 
   - Use table-driven tests for different routing and payload cases.
-  - Keep the validator small and focused—decode, assert, return.
+  - Keep the validator small and focused-decode, assert, return.
   - Prefer component mocks unless you truly need wire-level checks.
 */
 package hostmock

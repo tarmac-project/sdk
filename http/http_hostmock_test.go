@@ -47,14 +47,14 @@ func baselineValidator(method, url string, expectedBody []byte) func([]byte) err
 		if err := pb.Unmarshal(payload, &req); err != nil {
 			return fmt.Errorf("could not unmarshal payload: %w", err)
 		}
-		if req.Method != method {
-			return fmt.Errorf("method mismatch: expected %s, got %s", method, req.Method)
+		if req.GetMethod() != method {
+			return fmt.Errorf("method mismatch: expected %s, got %s", method, req.GetMethod())
 		}
-		if req.Url != url {
-			return fmt.Errorf("url mismatch: expected %s, got %s", url, req.Url)
+		if req.GetUrl() != url {
+			return fmt.Errorf("url mismatch: expected %s, got %s", url, req.GetUrl())
 		}
-		if expectedBody != nil && !bytes.Equal(req.Body, expectedBody) {
-			return fmt.Errorf("body mismatch: expected %q, got %q", string(expectedBody), string(req.Body))
+		if expectedBody != nil && !bytes.Equal(req.GetBody(), expectedBody) {
+			return fmt.Errorf("body mismatch: expected %q, got %q", string(expectedBody), string(req.GetBody()))
 		}
 		return nil
 	}
@@ -142,7 +142,6 @@ func TestHTTPClientHostMock_HappyPaths(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			var bodyReader io.Reader
 			var bodyBytes []byte
@@ -171,9 +170,9 @@ func TestHTTPClientHostMock_HappyPaths(t *testing.T) {
 					}
 					for wantK, wantV := range hv {
 						matched := false
-						for gotK, h := range req.Headers {
+						for gotK, h := range req.GetHeaders() {
 							if strings.EqualFold(gotK, wantK) {
-								matched = h != nil && len(h.Values) > 0 && h.Values[0] == wantV
+								matched = h != nil && len(h.GetValues()) > 0 && h.GetValues()[0] == wantV
 								break
 							}
 						}
@@ -220,14 +219,13 @@ func TestHTTPClientHostMock_HostFailures(t *testing.T) {
 		{"Do PATCH fail", http.MethodPatch, "http://example.com/a", "application/json", `{}`},
 	}
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			mockCfg := hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
 				ExpectedCapability: "httpclient",
 				ExpectedFunction:   "call",
 				Fail:               true,
-				Error:              fmt.Errorf("host call failed"),
+				Error:              errors.New("host call failed"),
 			}
 			client, err := newClientWith(mockCfg)
 			if err != nil {
@@ -252,7 +250,6 @@ func TestHTTPClientHostMock_UnmarshalFailures(t *testing.T) {
 		{"POST bad protobuf", http.MethodPost, "http://example.com/x"},
 	}
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			mockCfg := hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
@@ -290,7 +287,6 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 		{"404 NotFound", 404, "Not Found", "http://example.com/missing"},
 	}
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			resp := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: tc.status, Code: int32(tc.code)}}
 			b, _ := pb.Marshal(resp)
@@ -323,8 +319,8 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 			if err := pb.Unmarshal(p, &req); err != nil {
 				return err
 			}
-			if req.Insecure != expected {
-				return fmt.Errorf("insecure flag: want %v got %v", expected, req.Insecure)
+			if req.GetInsecure() != expected {
+				return fmt.Errorf("insecure flag: want %v got %v", expected, req.GetInsecure())
 			}
 			return nil
 		}
@@ -354,8 +350,8 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new: %v", err)
 	}
-	if _, err := c.Get("http://example.com"); err != nil {
-		t.Fatalf("get: %v", err)
+	if _, gerr := c.Get("http://example.com"); gerr != nil {
+		t.Fatalf("get: %v", gerr)
 	}
 	_ = client // silence unused variable in case of future expansion
 }
@@ -380,7 +376,6 @@ func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			client, err := newClientWith(hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,

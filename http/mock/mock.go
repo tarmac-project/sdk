@@ -11,6 +11,8 @@ import (
 
 // MockClient implements sdkhttp.Client with configurable responses and call
 // recording for tests. It never performs network I/O.
+//
+// revive:disable:exported // Name mirrors package for discoverability; stutter is acceptable here.
 type MockClient struct {
 	// responses maps "METHOD URL" keys to predefined responses.
 	responses map[string]*Response
@@ -21,6 +23,8 @@ type MockClient struct {
 	// Calls records each request observed by the mock client.
 	Calls []Call
 }
+
+// revive:enable:exported
 
 // Response describes a synthetic HTTP response used by the mock.
 type Response struct {
@@ -60,7 +64,7 @@ func New(config Config) *MockClient {
 	defaultResp := config.DefaultResponse
 	if defaultResp == nil {
 		defaultResp = &Response{
-			StatusCode: 200,
+			StatusCode: http.StatusOK,
 			Status:     "OK",
 			Body:       []byte(`{"status":"success"}`),
 			Header:     make(http.Header),

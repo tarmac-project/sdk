@@ -12,6 +12,9 @@
 
 version: "2"
 
+run:
+  tests: true
+
 issues:
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
@@ -157,6 +160,8 @@ linters:
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
     #- wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
+  disable:
+    - testpackage
 
   # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
   settings:
@@ -435,6 +440,9 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
+      # Allow complex/long functions in tests; behavior is validated via unit tests.
+      - path: ".*_test\\.go$"
+        linters: [ gocognit, gocyclo, funlen, testpackage ]
       - source: 'TODO'
         linters: [ godot ]
       - text: 'should have a package comment'
@@ -453,6 +461,9 @@ linters:
           - dupl
           - errcheck
           - funlen
+          - gocyclo
+          - gocognit
+          - cyclop
           - goconst
           - gosec
           - noctx

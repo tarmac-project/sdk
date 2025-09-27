@@ -2,7 +2,6 @@ package http
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -18,7 +17,7 @@ import (
 	"github.com/madflojo/testlazy/things/testurl"
 )
 
-var TestErrBadReader = fmt.Errorf("bad reader error")
+var ErrTestBadReader = errors.New("bad reader error")
 
 type InterfaceTestCase struct {
 	name        string
@@ -76,8 +75,8 @@ func TestHTTPClient(t *testing.T) {
 				"POST",
 				"http://example.com",
 				"text/plain",
-				iotest.ErrReader(TestErrBadReader),
-				TestErrBadReader,
+				iotest.ErrReader(ErrTestBadReader),
+				ErrTestBadReader,
 			},
 			{"PUT success", "PUT", "http://example.com", "text/plain", strings.NewReader("body"), nil},
 			{"PUT with bad URL", "PUT", "://bad-url", "", nil, ErrInvalidURL},
@@ -88,8 +87,8 @@ func TestHTTPClient(t *testing.T) {
 				"PUT",
 				"http://example.com",
 				"text/plain",
-				iotest.ErrReader(TestErrBadReader),
-				TestErrBadReader,
+				iotest.ErrReader(ErrTestBadReader),
+				ErrTestBadReader,
 			},
 			{"DELETE success", "DELETE", "http://example.com", "", nil, nil},
 			{"DELETE with bad URL", "DELETE", "://bad-url", "", nil, ErrInvalidURL},
@@ -97,36 +96,35 @@ func TestHTTPClient(t *testing.T) {
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
 				var (
-					resp *Response
-					err  error
+					resp  *Response
+					opErr error
 				)
 
 				switch tc.method {
 				case "GET":
-					resp, err = client.Get(tc.url)
+					resp, opErr = client.Get(tc.url)
 				case "POST":
-					resp, err = client.Post(tc.url, tc.contentType, tc.body)
+					resp, opErr = client.Post(tc.url, tc.contentType, tc.body)
 				case "PUT":
-					resp, err = client.Put(tc.url, tc.contentType, tc.body)
+					resp, opErr = client.Put(tc.url, tc.contentType, tc.body)
 				case "DELETE":
-					resp, err = client.Delete(tc.url)
+					resp, opErr = client.Delete(tc.url)
 				}
 
 				// Check for expected errors
-				if !errors.Is(err, tc.expectedErr) {
-					t.Fatalf("unexpected error: %v", err)
+				if !errors.Is(opErr, tc.expectedErr) {
+					t.Fatalf("unexpected error: %v", opErr)
 				}
 
 				// If we hit the bad reader path, also ensure ErrReadBody is present
-				if err != nil && errors.Is(err, TestErrBadReader) && !errors.Is(err, ErrReadBody) {
-					t.Fatalf("expected ErrReadBody in error chain, got %v", err)
+				if opErr != nil && errors.Is(opErr, ErrTestBadReader) && !errors.Is(opErr, ErrReadBody) {
+					t.Fatalf("expected ErrReadBody in error chain, got %v", opErr)
 				}
 
 				// If no error, ensure we got a valid response
-				if err == nil {
+				if opErr == nil {
 					if resp == nil {
 						t.Fatal("expected non-nil response when no error")
 					}
@@ -155,11 +153,10 @@ func TestHTTPClient(t *testing.T) {
 			{"Nil Body", "PATCH", "http://example.com", nil, nil},
 		}
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
-				_, err := NewRequest(tc.method, tc.url, tc.body)
-				if !errors.Is(err, tc.expectedErr) {
-					t.Fatalf("unexpected error: %v", err)
+				_, gotErr := NewRequest(tc.method, tc.url, tc.body)
+				if !errors.Is(gotErr, tc.expectedErr) {
+					t.Fatalf("unexpected error: %v", gotErr)
 				}
 			})
 		}
@@ -194,31 +191,30 @@ func TestHTTPClient(t *testing.T) {
 				&Request{
 					Method: http.MethodPost,
 					URL:    testurl.URLHTTPS(),
-					Body:   io.NopCloser(iotest.ErrReader(TestErrBadReader)),
+					Body:   io.NopCloser(iotest.ErrReader(ErrTestBadReader)),
 				},
 				ErrReadBody,
 			},
 		}
 
 		for _, tc := range tt {
-			tc := tc
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := client.Do(tc.request)
-				if err != nil || !errors.Is(err, tc.expectedErr) {
+				resp2, err2 := client.Do(tc.request)
+				if err2 != nil || !errors.Is(err2, tc.expectedErr) {
 					if tc.expectedErr == nil {
-						t.Fatalf("unexpected error: %v", err)
+						t.Fatalf("unexpected error: %v", err2)
 					}
-					if !errors.Is(err, tc.expectedErr) {
-						t.Errorf("expected error %v, got %v", tc.expectedErr, err)
+					if !errors.Is(err2, tc.expectedErr) {
+						t.Errorf("expected error %v, got %v", tc.expectedErr, err2)
 					}
 					return
 				}
-				if resp == nil {
+				if resp2 == nil {
 					t.Fatal("expected a response, got nil")
 				}
 
-				if resp.StatusCode != http.StatusOK {
-					t.Errorf("expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+				if resp2.StatusCode != http.StatusOK {
+					t.Errorf("expected status code %d, got %d", http.StatusOK, resp2.StatusCode)
 				}
 			})
 		}

@@ -20,14 +20,6 @@ issues:
   # Set to 0 to disable.
   # Default: 3
   max-same-issues: 50
-  exclude-rules:
-    # Allow complex/long functions in tests; we validate behavior via unit tests.
-    - path: ".*_test\\.go$"
-      linters:
-        - gocognit
-        - gocyclo
-        - funlen
-        - testpackage
 
 formatters:
   enable:
@@ -448,6 +440,9 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
+      # Allow complex/long functions in tests; behavior is validated via unit tests.
+      - path: ".*_test\\.go$"
+        linters: [ gocognit, gocyclo, funlen, testpackage ]
       - source: 'TODO'
         linters: [ godot ]
       - text: 'should have a package comment'

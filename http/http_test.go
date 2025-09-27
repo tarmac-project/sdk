@@ -120,11 +120,11 @@ func TestHTTPClient(t *testing.T) {
 
 				// If we hit the bad reader path, also ensure ErrReadBody is present
 				if opErr != nil && errors.Is(opErr, ErrTestBadReader) && !errors.Is(opErr, ErrReadBody) {
-					t.Fatalf("expected ErrReadBody in error chain, got %v", err)
+					t.Fatalf("expected ErrReadBody in error chain, got %v", opErr)
 				}
 
 				// If no error, ensure we got a valid response
-				if err == nil {
+				if opErr == nil {
 					if resp == nil {
 						t.Fatal("expected non-nil response when no error")
 					}

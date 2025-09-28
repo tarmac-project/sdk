@@ -14,13 +14,6 @@ import (
 	pb "google.golang.org/protobuf/proto"
 )
 
-type InterfaceTestCase struct {
-	Name           string           // Descriptive name of the test case
-	Key            string           // Key to use in KV operations
-	Value          []byte           // Value to store/retrieve
-	ExpectedErrors map[string]error // Map of operation names to expected errors
-}
-
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -63,90 +56,247 @@ func TestNew(t *testing.T) {
 func TestKVInterface(t *testing.T) {
 	t.Parallel()
 
-	kv, err := New(Config{SDKConfig: sdk.RuntimeConfig{}})
-	if err != nil {
-		t.Fatalf("New returned error: %v", err)
+	const (
+		namespace  = "interface"
+		capability = "kvstore"
+	)
+
+	buildHost := func(t *testing.T, configs map[string]hostmock.Config) func(string, string, string, []byte) ([]byte, error) {
+		t.Helper()
+		mocks := make(map[string]*hostmock.Mock)
+		for fn, cfg := range configs {
+			cfg.ExpectedNamespace = namespace
+			cfg.ExpectedCapability = capability
+			cfg.ExpectedFunction = fn
+			mock, err := hostmock.New(cfg)
+			if err != nil {
+				t.Fatalf("hostmock for %s: %v", fn, err)
+			}
+			mocks[fn] = mock
+		}
+		return func(ns, cap, fn string, payload []byte) ([]byte, error) {
+			mock, ok := mocks[fn]
+			if !ok {
+				return nil, fmt.Errorf("unexpected host function %q", fn)
+			}
+			return mock.HostCall(ns, cap, fn, payload)
+		}
 	}
 
-	// Define test cases covering different scenarios
-	tt := []InterfaceTestCase{
+	tt := []struct {
+		name           string
+		key            string
+		value          []byte
+		wantKeys       []string
+		expectedErrors map[string]error
+		hostConfigs    map[string]hostmock.Config
+	}{
 		{
-			Name:  "Valid Key/Value",
-			Key:   "key1",
-			Value: []byte("boring"),
-			ExpectedErrors: map[string]error{
+			name:     "Valid Key/Value",
+			key:      "key1",
+			value:    []byte("testdata"),
+			wantKeys: []string{"key1"},
+			expectedErrors: map[string]error{
 				"SET":    nil,
 				"GET":    nil,
 				"DELETE": nil,
 				"KEYS":   nil,
 			},
+			hostConfigs: map[string]hostmock.Config{
+				"set": {
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreSet
+						if err := pb.Unmarshal(payload, &req); err != nil {
+							return err
+						}
+						if req.GetKey() != "key1" {
+							return fmt.Errorf("unexpected key: %s", req.GetKey())
+						}
+						if string(req.GetData()) != "testdata" {
+							return fmt.Errorf("unexpected data: %s", string(req.GetData()))
+						}
+						return nil
+					},
+					Response: func() []byte {
+						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				"get": {
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreGet
+						if err := pb.Unmarshal(payload, &req); err != nil {
+							return err
+						}
+						if req.GetKey() != "key1" {
+							return fmt.Errorf("unexpected key: %s", req.GetKey())
+						}
+						return nil
+					},
+					Response: func() []byte {
+						resp := &proto.KVStoreGetResponse{
+							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Data:   []byte("testdata"),
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				"delete": {
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreDelete
+						if err := pb.Unmarshal(payload, &req); err != nil {
+							return err
+						}
+						if req.GetKey() != "key1" {
+							return fmt.Errorf("unexpected key: %s", req.GetKey())
+						}
+						return nil
+					},
+					Response: func() []byte {
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				"keys": {
+					Response: func() []byte {
+						resp := &proto.KVStoreKeysResponse{
+							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Keys:   []string{"key1"},
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+			},
 		},
 		{
-			Name:  "Empty Key",
-			Key:   "",
-			Value: []byte("less_boring"),
-			ExpectedErrors: map[string]error{
+			name:     "Empty Key",
+			key:      "",
+			value:    []byte("different_testdata"),
+			wantKeys: []string{},
+			expectedErrors: map[string]error{
 				"SET":    ErrInvalidKey,
 				"GET":    ErrInvalidKey,
 				"DELETE": ErrInvalidKey,
 				"KEYS":   nil,
 			},
+			hostConfigs: map[string]hostmock.Config{
+				"keys": {
+					Response: func() []byte {
+						resp := &proto.KVStoreKeysResponse{
+							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Keys:   []string{},
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+			},
 		},
 		{
-			Name:  "Empty Value",
-			Key:   "key3",
-			Value: nil,
-			ExpectedErrors: map[string]error{
+			name:     "Empty Value",
+			key:      "key3",
+			value:    nil,
+			wantKeys: []string{"key3"},
+			expectedErrors: map[string]error{
 				"SET":    ErrInvalidValue,
 				"GET":    nil,
 				"DELETE": nil,
 				"KEYS":   nil,
 			},
+			hostConfigs: map[string]hostmock.Config{
+				"get": {
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreGet
+						if err := pb.Unmarshal(payload, &req); err != nil {
+							return err
+						}
+						if req.GetKey() != "key3" {
+							return fmt.Errorf("unexpected key: %s", req.GetKey())
+						}
+						return nil
+					},
+					Response: func() []byte {
+						resp := &proto.KVStoreGetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}, Data: nil}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				"delete": {
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreDelete
+						if err := pb.Unmarshal(payload, &req); err != nil {
+							return err
+						}
+						if req.GetKey() != "key3" {
+							return fmt.Errorf("unexpected key: %s", req.GetKey())
+						}
+						return nil
+					},
+					Response: func() []byte {
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				"keys": {
+					Response: func() []byte {
+						resp := &proto.KVStoreKeysResponse{
+							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Keys:   []string{"key3"},
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+			},
 		},
 	}
 
-	// Run tests for each test case
 	for _, tc := range tt {
-		t.Run(tc.Name, func(t *testing.T) {
-			// Test SET operation
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			hostCall := buildHost(t, tc.hostConfigs)
+			client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: hostCall})
+			if err != nil {
+				t.Fatalf("New returned error: %v", err)
+			}
+
 			t.Run("SET", func(t *testing.T) {
-				err := kv.Set(tc.Key, tc.Value)
-				if err != tc.ExpectedErrors["SET"] {
-					t.Fatalf("Expected error %v, got %v", tc.ExpectedErrors["SET"], err)
+				err := client.Set(tc.key, tc.value)
+				if !errors.Is(err, tc.expectedErrors["SET"]) {
+					t.Fatalf("expected SET error %v, got %v", tc.expectedErrors["SET"], err)
 				}
 			})
 
-			// Test GET operation
 			t.Run("GET", func(t *testing.T) {
-				_, err := kv.Get(tc.Key)
-				if err != tc.ExpectedErrors["GET"] {
-					t.Fatalf("Expected error %v, got %v", tc.ExpectedErrors["GET"], err)
+				_, err := client.Get(tc.key)
+				if !errors.Is(err, tc.expectedErrors["GET"]) {
+					t.Fatalf("expected GET error %v, got %v", tc.expectedErrors["GET"], err)
 				}
 			})
 
-			// Test DELETE operation
 			t.Run("DELETE", func(t *testing.T) {
-				err := kv.Delete(tc.Key)
-				if err != tc.ExpectedErrors["DELETE"] {
-					t.Fatalf("Expected error %v, got %v", tc.ExpectedErrors["DELETE"], err)
+				err := client.Delete(tc.key)
+				if !errors.Is(err, tc.expectedErrors["DELETE"]) {
+					t.Fatalf("expected DELETE error %v, got %v", tc.expectedErrors["DELETE"], err)
+				}
+			})
+
+			t.Run("KEYS", func(t *testing.T) {
+				keys, err := client.Keys()
+				if !errors.Is(err, tc.expectedErrors["KEYS"]) {
+					t.Fatalf("expected KEYS error %v, got %v", tc.expectedErrors["KEYS"], err)
+				}
+				if err == nil && !slices.Equal(keys, tc.wantKeys) {
+					t.Fatalf("unexpected keys: got %v, want %v", keys, tc.wantKeys)
 				}
 			})
 		})
 	}
-
-	// Test KEYS operation separately with a fresh KV instance
-	t.Run("KEYS", func(t *testing.T) {
-		kv, err := New(Config{SDKConfig: sdk.RuntimeConfig{}})
-		if err != nil {
-			t.Fatalf("New returned error: %v", err)
-		}
-		defer kv.Close() //nolint:errcheck
-
-		_, err = kv.Keys()
-		if err != nil {
-			t.Fatalf("Expected no error, got %v", err)
-		}
-	})
 }
 
 // TestKVClientHostMock exercises Get, Set, Delete, and Keys using a hostmock to simulate waPC host calls.

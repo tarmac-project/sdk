@@ -33,7 +33,7 @@ func BenchmarkKVClient(b *testing.B) {
 
 	b.Run("Get", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			if _, err := clientGet.Get("benchmark-key"); err != nil {
 				b.Fatalf("Get failed: %v", err)
 			}
@@ -56,7 +56,7 @@ func BenchmarkKVClient(b *testing.B) {
 
 	b.Run("Set", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			if err := clientSet.Set("benchmark-key", []byte("value")); err != nil {
 				b.Fatalf("Set failed: %v", err)
 			}
@@ -79,7 +79,7 @@ func BenchmarkKVClient(b *testing.B) {
 
 	b.Run("Delete", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			if err := clientDel.Delete("benchmark-key"); err != nil {
 				b.Fatalf("Delete failed: %v", err)
 			}
@@ -105,7 +105,7 @@ func BenchmarkKVClient(b *testing.B) {
 
 	b.Run("Keys", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			if _, err := clientKeys.Keys(); err != nil {
 				b.Fatalf("Keys failed: %v", err)
 			}

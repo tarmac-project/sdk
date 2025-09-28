@@ -35,7 +35,6 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -74,12 +73,12 @@ func TestKVInterface(t *testing.T) {
 			}
 			mocks[fn] = mock
 		}
-		return func(ns, cap, fn string, payload []byte) ([]byte, error) {
+		return func(ns, capabilityName, fn string, payload []byte) ([]byte, error) {
 			mock, ok := mocks[fn]
 			if !ok {
 				return nil, fmt.Errorf("unexpected host function %q", fn)
 			}
-			return mock.HostCall(ns, cap, fn, payload)
+			return mock.HostCall(ns, capabilityName, fn, payload)
 		}
 	}
 
@@ -257,8 +256,9 @@ func TestKVInterface(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			hostCall := buildHost(t, tc.hostConfigs)
 			client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: hostCall})
 			if err != nil {
@@ -266,32 +266,32 @@ func TestKVInterface(t *testing.T) {
 			}
 
 			t.Run("SET", func(t *testing.T) {
-				err := client.Set(tc.key, tc.value)
-				if !errors.Is(err, tc.expectedErrors["SET"]) {
-					t.Fatalf("expected SET error %v, got %v", tc.expectedErrors["SET"], err)
+				setErr := client.Set(tc.key, tc.value)
+				if !errors.Is(setErr, tc.expectedErrors["SET"]) {
+					t.Fatalf("expected SET error %v, got %v", tc.expectedErrors["SET"], setErr)
 				}
 			})
 
 			t.Run("GET", func(t *testing.T) {
-				_, err := client.Get(tc.key)
-				if !errors.Is(err, tc.expectedErrors["GET"]) {
-					t.Fatalf("expected GET error %v, got %v", tc.expectedErrors["GET"], err)
+				_, getErr := client.Get(tc.key)
+				if !errors.Is(getErr, tc.expectedErrors["GET"]) {
+					t.Fatalf("expected GET error %v, got %v", tc.expectedErrors["GET"], getErr)
 				}
 			})
 
 			t.Run("DELETE", func(t *testing.T) {
-				err := client.Delete(tc.key)
-				if !errors.Is(err, tc.expectedErrors["DELETE"]) {
-					t.Fatalf("expected DELETE error %v, got %v", tc.expectedErrors["DELETE"], err)
+				deleteErr := client.Delete(tc.key)
+				if !errors.Is(deleteErr, tc.expectedErrors["DELETE"]) {
+					t.Fatalf("expected DELETE error %v, got %v", tc.expectedErrors["DELETE"], deleteErr)
 				}
 			})
 
 			t.Run("KEYS", func(t *testing.T) {
-				keys, err := client.Keys()
-				if !errors.Is(err, tc.expectedErrors["KEYS"]) {
-					t.Fatalf("expected KEYS error %v, got %v", tc.expectedErrors["KEYS"], err)
+				keys, keysErr := client.Keys()
+				if !errors.Is(keysErr, tc.expectedErrors["KEYS"]) {
+					t.Fatalf("expected KEYS error %v, got %v", tc.expectedErrors["KEYS"], keysErr)
 				}
-				if err == nil && !slices.Equal(keys, tc.wantKeys) {
+				if keysErr == nil && !slices.Equal(keys, tc.wantKeys) {
 					t.Fatalf("unexpected keys: got %v, want %v", keys, tc.wantKeys)
 				}
 			})
@@ -339,7 +339,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedCapability: capability,
 					ExpectedFunction:   "get",
 					Fail:               true,
-					Error:              fmt.Errorf("host failure"),
+					Error:              errors.New("host failure"),
 				},
 				wantValue: nil,
 				wantErr:   ErrHostCall,
@@ -450,7 +450,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedCapability: capability,
 					ExpectedFunction:   "set",
 					Fail:               true,
-					Error:              fmt.Errorf("host failure"),
+					Error:              errors.New("host failure"),
 				},
 				wantErr: ErrHostCall,
 			},
@@ -542,7 +542,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedCapability: capability,
 					ExpectedFunction:   "delete",
 					Fail:               true,
-					Error:              fmt.Errorf("host failure"),
+					Error:              errors.New("host failure"),
 				},
 				wantErr: ErrHostCall,
 			},
@@ -615,7 +615,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedCapability: capability,
 					ExpectedFunction:   "keys",
 					Fail:               true,
-					Error:              fmt.Errorf("host failure"),
+					Error:              errors.New("host failure"),
 				},
 				wantKeys: nil,
 				wantErr:  ErrHostCall,

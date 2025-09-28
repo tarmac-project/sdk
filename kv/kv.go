@@ -68,6 +68,8 @@ var (
 	ErrHostCall = errors.New("host call failed")
 )
 
+const statusNotFound = int32(404)
+
 // New creates a new key-value client.
 func New(config Config) (Client, error) {
 	runtime := config.SDKConfig
@@ -103,14 +105,14 @@ func (c *client) Get(key string) ([]byte, error) {
 	}
 	respBytes, err := c.hostCall(c.runtime.Namespace, "kvstore", "get", b)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrHostCall, err)
+		return nil, errors.Join(ErrHostCall, err)
 	}
 	var resp kvstore.KVStoreGetResponse
-	if err := pb.Unmarshal(respBytes, &resp); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrHostResponseInvalid, err)
+	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+		return nil, errors.Join(ErrHostResponseInvalid, unmarshalErr)
 	}
-	if s := resp.GetStatus(); s != nil && s.Code != 0 {
-		if s.Code == 404 {
+	if status := resp.GetStatus(); status != nil && status.GetCode() != 0 {
+		if status.GetCode() == statusNotFound {
 			return nil, ErrKeyNotFound
 		}
 		return nil, ErrHostResponseInvalid
@@ -134,13 +136,13 @@ func (c *client) Set(key string, value []byte) error {
 	}
 	respBytes, err := c.hostCall(c.runtime.Namespace, "kvstore", "set", b)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrHostCall, err)
+		return errors.Join(ErrHostCall, err)
 	}
 	var resp kvstore.KVStoreSetResponse
-	if err := pb.Unmarshal(respBytes, &resp); err != nil {
-		return fmt.Errorf("%w: %v", ErrHostResponseInvalid, err)
+	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+		return errors.Join(ErrHostResponseInvalid, unmarshalErr)
 	}
-	if s := resp.GetStatus(); s != nil && s.Code != 0 {
+	if status := resp.GetStatus(); status != nil && status.GetCode() != 0 {
 		return ErrHostResponseInvalid
 	}
 	return nil
@@ -158,13 +160,13 @@ func (c *client) Delete(key string) error {
 	}
 	respBytes, err := c.hostCall(c.runtime.Namespace, "kvstore", "delete", b)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrHostCall, err)
+		return errors.Join(ErrHostCall, err)
 	}
 	var resp kvstore.KVStoreDeleteResponse
-	if err := pb.Unmarshal(respBytes, &resp); err != nil {
-		return fmt.Errorf("%w: %v", ErrHostResponseInvalid, err)
+	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+		return errors.Join(ErrHostResponseInvalid, unmarshalErr)
 	}
-	if s := resp.GetStatus(); s != nil && s.Code != 0 {
+	if status := resp.GetStatus(); status != nil && status.GetCode() != 0 {
 		return ErrHostResponseInvalid
 	}
 	return nil
@@ -179,13 +181,13 @@ func (c *client) Keys() ([]string, error) {
 	}
 	respBytes, err := c.hostCall(c.runtime.Namespace, "kvstore", "keys", b)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrHostCall, err)
+		return nil, errors.Join(ErrHostCall, err)
 	}
 	var resp kvstore.KVStoreKeysResponse
-	if err := pb.Unmarshal(respBytes, &resp); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrHostResponseInvalid, err)
+	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+		return nil, errors.Join(ErrHostResponseInvalid, unmarshalErr)
 	}
-	if s := resp.GetStatus(); s != nil && s.Code != 0 {
+	if status := resp.GetStatus(); status != nil && status.GetCode() != 0 {
 		return nil, ErrHostResponseInvalid
 	}
 	return resp.GetKeys(), nil

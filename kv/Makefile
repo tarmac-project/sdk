@@ -1,61 +1,52 @@
-.PHONY: all clean tests lint build format benchmarks
+.PHONY: all clean tests lint build format coverage benchmarks
 
 all: build tests lint
 
-COMPONENTS = http kv
-
-# Run tests for all components
+# Run tests with coverage
 tests:
-	@echo "Running tests for all components..."
-	@for dir in $(COMPONENTS); do \
-		$(MAKE) -C $$dir tests || exit 1; \
-	done
+	@echo "Running tests with coverage..."
+	go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+	@go tool cover -func=coverage.out
+	@if command -v go tool cover > /dev/null 2>&1; then \
+		go tool cover -html=coverage.out -o coverage.html; \
+	fi
 
 
 
+# Run benchmarks
 benchmarks:
-	@echo "Running benchmarks for all components..."
-	@for dir in $(COMPONENTS); do \
-		$(MAKE) -C $$dir benchmarks || exit 1; \
-	done
+	@echo "Running benchmarks..."
+	go test -run=^$$ -bench=. -benchmem ./...
 
-# Build all components
+# Build the package
 build:
-	@echo "Building all components..."
-	@for dir in $(COMPONENTS); do \
-		$(MAKE) -C $$dir build || exit 1; \
-	done
+	@echo "Building package..."
+	go build ./...
 
-# Format all code
+# Format code
 format:
 	@echo "Formatting code..."
 	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 gofmt -s -w
 	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 goimports -w
 	@find . -type f -name "*.go" -not -path "./vendor/*" -print0 | xargs -0 golines -m 120 -w
-	@for dir in $(COMPONENTS); do \
-		$(MAKE) -C $$dir format || exit 1; \
-	done
 
-# Lint all code
+# Lint code
 lint:
 	@echo "Linting code..."
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \
-		for dir in $(COMPONENTS); do \
-			$(MAKE) -C $$dir lint || exit 1; \
-		done; \
 	else \
 		echo "golangci-lint not installed, skipping lint"; \
 	fi
 
+# Generate coverage report
+coverage: tests
+	@go tool cover -html=coverage.out
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@for dir in $(COMPONENTS); do \
-		$(MAKE) -C $$dir clean || exit 1; \
-	done
 	@find . -type f -name "*.test" -delete
 	@find . -type f -name "coverage.out" -delete
 	@find . -type f -name "coverage.html" -delete
 	@find . -type d -name "vendor" -exec rm -rf {} + 2>/dev/null || true
-	@rm -rf bin/

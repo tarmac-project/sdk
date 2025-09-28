@@ -13,13 +13,9 @@ Why use hostmock?
 
 When should I use it?
 
-Most users writing functions should prefer component-level mocks:
-
-  - github.com/tarmac-project/sdk/http/mock
-  - github.com/tarmac-project/sdk/kv/mock
-
-They're simpler and avoid coupling your tests to the wire format. Reach for
-hostmock when you need to assert the waPC payloads or validate capability routing.
+Reach for hostmock when you need to assert waPC payloads directly, validate
+capability routing, or simulate host-side failures without spinning up a full
+environment.
 
 Quick start
 

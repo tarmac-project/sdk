@@ -41,8 +41,12 @@ type Config struct {
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// client implements Client using a configured waPC host call.
 type client struct {
-	runtime  sdk.RuntimeConfig
+	// runtime carries the namespace and other shared configuration for host calls.
+	runtime sdk.RuntimeConfig
+
+	// hostCall issues waPC invocations on behalf of the client.
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
@@ -68,6 +72,7 @@ var (
 	ErrHostCall = errors.New("host call failed")
 )
 
+// statusNotFound mirrors the protobuf status code that indicates a missing key.
 const statusNotFound = int32(404)
 
 // New creates a new key-value client.

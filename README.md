@@ -56,6 +56,7 @@ The project is organized into focused modules so you can depend only on what you
 | ------------- | -------------------------------------------------- | --------------------------------------------------------- |
 | `sdk`         | Core runtime config and handler registration  | https://pkg.go.dev/github.com/tarmac-project/sdk          |
 | `sdk/http`    | HTTP client      | https://pkg.go.dev/github.com/tarmac-project/sdk/http     |
+| `sdk/kv`      | Key-value client | https://pkg.go.dev/github.com/tarmac-project/sdk/kv       |
 | `sdk/hostmock` | Low-level host-call simulator for assertions | https://pkg.go.dev/github.com/tarmac-project/sdk/hostmock |
 
 ---

@@ -117,7 +117,7 @@ func TestKVInterface(t *testing.T) {
 						return nil
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -135,7 +135,7 @@ func TestKVInterface(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreGetResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Data:   []byte("testdata"),
 						}
 						b, _ := pb.Marshal(resp)
@@ -154,7 +154,7 @@ func TestKVInterface(t *testing.T) {
 						return nil
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -162,7 +162,7 @@ func TestKVInterface(t *testing.T) {
 				"keys": {
 					Response: func() []byte {
 						resp := &proto.KVStoreKeysResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"key1"},
 						}
 						b, _ := pb.Marshal(resp)
@@ -186,7 +186,7 @@ func TestKVInterface(t *testing.T) {
 				"keys": {
 					Response: func() []byte {
 						resp := &proto.KVStoreKeysResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{},
 						}
 						b, _ := pb.Marshal(resp)
@@ -219,7 +219,7 @@ func TestKVInterface(t *testing.T) {
 						return nil
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreGetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}, Data: nil}
+						resp := &proto.KVStoreGetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}, Data: nil}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -236,7 +236,7 @@ func TestKVInterface(t *testing.T) {
 						return nil
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -244,7 +244,7 @@ func TestKVInterface(t *testing.T) {
 				"keys": {
 					Response: func() []byte {
 						resp := &proto.KVStoreKeysResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"key3"},
 						}
 						b, _ := pb.Marshal(resp)
@@ -321,7 +321,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedFunction:   "get",
 					Response: func() []byte {
 						resp := &proto.KVStoreGetResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Data:   []byte("value1"),
 						}
 						b, _ := pb.Marshal(resp)
@@ -345,12 +345,39 @@ func TestKVClientHostMock(t *testing.T) {
 				wantErr:   ErrHostCall,
 			},
 			{
+				name: "internal error",
+				key:  "key1",
+				mockConfig: hostmock.Config{
+					ExpectedNamespace:  namespace,
+					ExpectedCapability: capability,
+					ExpectedFunction:   "get",
+					Fail:               true,
+					Error:              errors.New("internal error"),
+					Response: func() []byte {
+						resp := &proto.KVStoreGetResponse{
+							Status: &sdkproto.Status{Status: "Internal", Code: 500},
+							Data:   nil,
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+					PayloadValidator: func(payload []byte) error {
+						var req proto.KVStoreGet
+						return pb.Unmarshal(payload, &req)
+					},
+				},
+				wantValue: nil,
+				wantErr:   ErrHostError,
+			},
+			{
 				name: "key not found",
 				key:  "key2",
 				mockConfig: hostmock.Config{
 					ExpectedNamespace:  namespace,
 					ExpectedCapability: capability,
 					ExpectedFunction:   "get",
+					Fail:               true,
+					Error:              errors.New("not found"),
 					Response: func() []byte {
 						resp := &proto.KVStoreGetResponse{
 							Status: &sdkproto.Status{Status: "NotFound", Code: 404},
@@ -434,7 +461,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return nil
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -455,6 +482,24 @@ func TestKVClientHostMock(t *testing.T) {
 				wantErr: ErrHostCall,
 			},
 			{
+				name:  "internal error",
+				key:   "key1",
+				value: []byte("value1"),
+				mockConfig: hostmock.Config{
+					ExpectedNamespace:  namespace,
+					ExpectedCapability: capability,
+					ExpectedFunction:   "set",
+					Fail:               true,
+					Error:              errors.New("internal error"),
+					Response: func() []byte {
+						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "Internal", Code: 500}}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				wantErr: ErrHostError,
+			},
+			{
 				name:  "invalid payload",
 				key:   "key1",
 				value: []byte("value1"),
@@ -462,6 +507,8 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedNamespace:  namespace,
 					ExpectedCapability: capability,
 					ExpectedFunction:   "set",
+					Fail:               true,
+					Error:              errors.New("invalid"),
 					Response: func() []byte {
 						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "Invalid", Code: 400}}
 						b, _ := pb.Marshal(resp)
@@ -527,7 +574,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return pb.Unmarshal(payload, &req)
 					},
 					Response: func() []byte {
-						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
 						b, _ := pb.Marshal(resp)
 						return b
 					},
@@ -545,6 +592,23 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("host failure"),
 				},
 				wantErr: ErrHostCall,
+			},
+			{
+				name: "internal error",
+				key:  "key1",
+				mockConfig: hostmock.Config{
+					ExpectedNamespace:  namespace,
+					ExpectedCapability: capability,
+					ExpectedFunction:   "delete",
+					Fail:               true,
+					Error:              errors.New("internal error"),
+					Response: func() []byte {
+						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "Internal", Code: 500}}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				wantErr: ErrHostError,
 			},
 			{
 				name: "invalid response",
@@ -598,7 +662,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedFunction:   "keys",
 					Response: func() []byte {
 						resp := &proto.KVStoreKeysResponse{
-							Status: &sdkproto.Status{Status: "OK", Code: 0},
+							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"a", "b", "c"},
 						}
 						b, _ := pb.Marshal(resp)
@@ -619,6 +683,25 @@ func TestKVClientHostMock(t *testing.T) {
 				},
 				wantKeys: nil,
 				wantErr:  ErrHostCall,
+			},
+			{
+				name: "internal error",
+				mockConfig: hostmock.Config{
+					ExpectedNamespace:  namespace,
+					ExpectedCapability: capability,
+					ExpectedFunction:   "keys",
+					Fail:               true,
+					Error:              errors.New("internal error"),
+					Response: func() []byte {
+						resp := &proto.KVStoreKeysResponse{
+							Status: &sdkproto.Status{Status: "Internal", Code: 500},
+						}
+						b, _ := pb.Marshal(resp)
+						return b
+					},
+				},
+				wantKeys: nil,
+				wantErr:  ErrHostError,
 			},
 		}
 

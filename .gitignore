@@ -24,6 +24,7 @@ go.work.sum
 .cache
 tmpcache
 tmp
+.gocache
 
 # env file
 .env

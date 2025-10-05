@@ -126,7 +126,7 @@ func (c *client) Get(key string) ([]byte, error) {
 
 	// Issue the host call and always inspect the payload.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "get", b)
-	if callErr != nil && (respBytes == nil || len(respBytes) == 0) {
+	if callErr != nil && len(respBytes) == 0 {
 		return nil, errors.Join(ErrHostCall, callErr)
 	}
 
@@ -166,7 +166,7 @@ func (c *client) Set(key string, value []byte) error {
 		return ErrInvalidKey
 	}
 
-	if value == nil || len(value) == 0 {
+	if len(value) == 0 {
 		return ErrInvalidValue
 	}
 

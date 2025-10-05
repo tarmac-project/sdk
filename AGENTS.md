@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 - Root package `sdk` exposes runtime config and handler registration; tests live alongside (`sdk_test.go`).
-- `http/` holds the HTTP capability client, benchmarks, and host-aware tests; `http/mock/` provides the high-level mock. Coverage artifacts may appear here but should be ignored.
+- `http/` holds the HTTP capability client, benchmarks, and host-aware tests. Coverage artifacts may appear here but should be ignored.
 - `hostmock/` simulates waPC host calls for integration-style assertions.
 - CI, release, and automation configs reside under `.github/` and `.release-*`.
 
@@ -20,7 +20,7 @@
 
 ## Testing Guidelines
 - Standard Go `testing` package with table-driven cases; include happy and error paths.
-- Prefer black-box assertions via mocks (`http/mock`, `hostmock`).
+- Prefer black-box assertions via `hostmock` or purpose-built fakes.
 - Benchmarks live in `*_benchmark_test.go`; keep them deterministic.
 - Ensure race detector and coverage succeed before opening a PR.
 

@@ -2,7 +2,7 @@
 
 all: build tests lint
 
-COMPONENTS = http
+COMPONENTS = http kv
 
 # Run tests for all components
 tests:

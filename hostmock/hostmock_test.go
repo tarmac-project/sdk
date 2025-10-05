@@ -62,7 +62,7 @@ func TestHostMock(t *testing.T) {
 			capability: "test",
 			function:   "test",
 			payload:    []byte("test"),
-			want:       nil,
+			want:       []byte("test"),
 			wantErr:    ErrMockError,
 		},
 		{

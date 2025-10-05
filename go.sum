@@ -6,6 +6,8 @@ github.com/planetscale/vtprotobuf v0.6.0 h1:nBeETjudeJ5ZgBHUz1fVHvbqUKnYOXNhsIEa
 github.com/planetscale/vtprotobuf v0.6.0/go.mod h1:t/avpk3KcrXxUnYOhZhMXJlSEyie6gQbtLq5NM3loB8=
 github.com/tarmac-project/protobuf-go v0.0.0-20241103152356-1b7b629d0434 h1:b6laQT6pQVzcGBUmcMxaDjWJUknW2UpstnR7cW2moSo=
 github.com/tarmac-project/protobuf-go v0.0.0-20241103152356-1b7b629d0434/go.mod h1:TtJAJlZ8d1xmkN32J8HHtvWOBPZMxEOg//yJeBXfbmw=
+github.com/tarmac-project/protobuf-go v0.0.0-20251004154304-968947a7ba38 h1:l8KcT3tFK9lfaB2TARid5r4QfuJ09r33kWtpDwlTN0w=
+github.com/tarmac-project/protobuf-go v0.0.0-20251004154304-968947a7ba38/go.mod h1:TtJAJlZ8d1xmkN32J8HHtvWOBPZMxEOg//yJeBXfbmw=
 github.com/wapc/wapc-guest-tinygo v0.3.3 h1:jLebiwjVSHLGnS+BRabQ6+XOV7oihVWAc05Hf1SbeR0=
 github.com/wapc/wapc-guest-tinygo v0.3.3/go.mod h1:mzM3CnsdSYktfPkaBdZ8v88ZlfUDEy5Jh5XBOV3fYcw=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=

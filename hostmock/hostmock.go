@@ -107,6 +107,13 @@ func (m *Mock) HostCall(namespace, capability, function string, payload []byte) 
 		return nil, fmt.Errorf("%w: expected function %s, got %s", ErrUnexpectedFunction, m.ExpectedFunction, function)
 	}
 
+	// Validate payload using user-defined validator, if provided
+	if m.PayloadValidator != nil {
+		if err := m.PayloadValidator(payload); err != nil {
+			return nil, err
+		}
+	}
+
 	// Return configured response alongside failure when requested.
 	if m.Fail {
 		var resp []byte
@@ -117,13 +124,6 @@ func (m *Mock) HostCall(namespace, capability, function string, payload []byte) 
 			return resp, m.Error
 		}
 		return resp, ErrOperationFailed
-	}
-
-	// Validate payload using user-defined validator, if provided
-	if m.PayloadValidator != nil {
-		if err := m.PayloadValidator(payload); err != nil {
-			return nil, err
-		}
 	}
 
 	// Return user-defined response if provided

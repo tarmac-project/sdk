@@ -193,7 +193,7 @@ func (c *client) Set(key string, value []byte) error {
 	}
 
 	status := resp.GetStatus()
-	if status != nil && (status.GetCode() == statusOK || status.GetCode() == 0) {
+	if status != nil && status.GetCode() == statusOK {
 		return nil
 	}
 
@@ -237,7 +237,7 @@ func (c *client) Delete(key string) error {
 	}
 
 	status := resp.GetStatus()
-	if status != nil && (status.GetCode() == statusOK || status.GetCode() == 0 || status.GetCode() == statusNotFound) {
+	if status != nil && (status.GetCode() == statusOK || status.GetCode() == statusNotFound) {
 		return nil
 	}
 
@@ -276,7 +276,7 @@ func (c *client) Keys() ([]string, error) {
 	}
 
 	status := resp.GetStatus()
-	if status != nil && (status.GetCode() == statusOK || status.GetCode() == 0) {
+	if status != nil && status.GetCode() == statusOK {
 		return resp.GetKeys(), nil
 	}
 

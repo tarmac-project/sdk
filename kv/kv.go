@@ -237,7 +237,7 @@ func (c *client) Delete(key string) error {
 	}
 
 	status := resp.GetStatus()
-	if status != nil && (status.GetCode() == statusOK || status.GetCode() == 0) {
+	if status != nil && (status.GetCode() == statusOK || status.GetCode() == 0 || status.GetCode() == statusNotFound) {
 		return nil
 	}
 

@@ -82,14 +82,16 @@ func New(config Config) (*Mock, error) {
 
 // HostCall simulates a host call, validating inputs and returning a response or error.
 func (m *Mock) HostCall(namespace, capability, function string, payload []byte) ([]byte, error) {
-	// Return user-defined error if Fail is set
-	if m.Fail && m.Error != nil {
-		return nil, m.Error
-	}
-
-	// Return default error if Fail is set but no custom error is provided
+	// Return configured response alongside failure when requested.
 	if m.Fail {
-		return nil, ErrOperationFailed
+		var resp []byte
+		if m.Response != nil {
+			resp = m.Response()
+		}
+		if m.Error != nil {
+			return resp, m.Error
+		}
+		return resp, ErrOperationFailed
 	}
 
 	// Validate namespace

@@ -82,18 +82,6 @@ func New(config Config) (*Mock, error) {
 
 // HostCall simulates a host call, validating inputs and returning a response or error.
 func (m *Mock) HostCall(namespace, capability, function string, payload []byte) ([]byte, error) {
-	// Return configured response alongside failure when requested.
-	if m.Fail {
-		var resp []byte
-		if m.Response != nil {
-			resp = m.Response()
-		}
-		if m.Error != nil {
-			return resp, m.Error
-		}
-		return resp, ErrOperationFailed
-	}
-
 	// Validate namespace
 	if m.ExpectedNamespace != namespace {
 		return nil, fmt.Errorf(
@@ -117,6 +105,18 @@ func (m *Mock) HostCall(namespace, capability, function string, payload []byte) 
 	// Validate function
 	if m.ExpectedFunction != function {
 		return nil, fmt.Errorf("%w: expected function %s, got %s", ErrUnexpectedFunction, m.ExpectedFunction, function)
+	}
+
+	// Return configured response alongside failure when requested.
+	if m.Fail {
+		var resp []byte
+		if m.Response != nil {
+			resp = m.Response()
+		}
+		if m.Error != nil {
+			return resp, m.Error
+		}
+		return resp, ErrOperationFailed
 	}
 
 	// Validate payload using user-defined validator, if provided

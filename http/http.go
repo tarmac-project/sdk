@@ -31,19 +31,19 @@ var validMethods = map[string]bool{
 
 // Client provides an interface for making HTTP requests.
 type Client interface {
-  // Get issues a GET request to the specified URL.
+	// Get issues a GET request to the specified URL.
 	Get(url string) (*Response, error)
 
-  // Post issues a POST request to the specified URL with the given content type and body.
+	// Post issues a POST request to the specified URL with the given content type and body.
 	Post(url, contentType string, body io.Reader) (*Response, error)
 
-  // Put issues a PUT request to the specified URL with the given content type and body.
+	// Put issues a PUT request to the specified URL with the given content type and body.
 	Put(url, contentType string, body io.Reader) (*Response, error)
 
-  // Delete issues a DELETE request to the specified URL.
+	// Delete issues a DELETE request to the specified URL.
 	Delete(url string) (*Response, error)
 
-  // Do issues a custom HTTP request and returns the response.
+	// Do issues a custom HTTP request and returns the response.
 	Do(req *Request) (*Response, error)
 }
 
@@ -105,7 +105,10 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 		}
 		return &Response{}, errors.Join(ErrHostError, fmt.Errorf("%s", detail))
 	default:
-		return &Response{}, errors.Join(ErrHostResponseInvalid, fmt.Errorf("unexpected host status code %d", statusCode))
+		return &Response{}, errors.Join(
+			ErrHostResponseInvalid,
+			fmt.Errorf("unexpected host status code %d", statusCode),
+		)
 	}
 
 	httpCode := int(r.GetCode())

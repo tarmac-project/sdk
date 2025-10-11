@@ -290,19 +290,19 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 	}{
 		{
 			name:              "HTTP 404, host success",
-			httpCode:          404,
+			httpCode:          http.StatusNotFound,
 			httpURL:           "http://example.com/missing",
 			hostStatusCode:    200,
 			hostStatusMessage: "host handled",
-			expectStatusText:  http.StatusText(404),
+			expectStatusText:  http.StatusText(http.StatusNotFound),
 		},
 		{
 			name:              "HTTP 200, host success",
-			httpCode:          200,
+			httpCode:          http.StatusOK,
 			httpURL:           "http://example.com/ok",
 			hostStatusCode:    200,
 			hostStatusMessage: "host ok",
-			expectStatusText:  http.StatusText(200),
+			expectStatusText:  http.StatusText(http.StatusOK),
 		},
 		{
 			name:              "HTTP 0 keeps empty status",

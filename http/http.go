@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -30,10 +31,19 @@ var validMethods = map[string]bool{
 
 // Client provides an interface for making HTTP requests.
 type Client interface {
+	// Get issues a GET request to the specified URL.
 	Get(url string) (*Response, error)
+
+	// Post issues a POST request to the specified URL with the given content type and body.
 	Post(url, contentType string, body io.Reader) (*Response, error)
+
+	// Put issues a PUT request to the specified URL with the given content type and body.
 	Put(url, contentType string, body io.Reader) (*Response, error)
+
+	// Delete issues a DELETE request to the specified URL.
 	Delete(url string) (*Response, error)
+
+	// Do issues a custom HTTP request and returns the response.
 	Do(req *Request) (*Response, error)
 }
 
@@ -79,17 +89,45 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 		return &Response{}, errors.Join(ErrUnmarshalResponse, unmarshalErr)
 	}
 
+	status := r.GetStatus()
+	if status == nil {
+		return &Response{}, ErrHostResponseInvalid
+	}
+
+	statusCode := status.GetCode()
+	switch statusCode {
+	case hostStatusOK, hostStatusPartial:
+		// success path continues
+	case hostStatusBadInput, hostStatusMissing, hostStatusError:
+		detail := fmt.Sprintf("host status %d", statusCode)
+		if msg := status.GetStatus(); msg != "" {
+			detail = fmt.Sprintf("%s: %s", detail, msg)
+		}
+		return &Response{}, errors.Join(ErrHostError, fmt.Errorf("%s", detail))
+	default:
+		return &Response{}, errors.Join(
+			ErrHostResponseInvalid,
+			fmt.Errorf("unexpected host status code %d", statusCode),
+		)
+	}
+
+	httpCode := int(r.GetCode())
+	statusText := http.StatusText(httpCode)
+
 	out := &Response{
-		Status:     r.GetStatus().GetStatus(),
-		StatusCode: int(r.GetStatus().GetCode()),
+		Status:     statusText,
+		StatusCode: httpCode,
 		Header:     make(http.Header),
 	}
+
 	for name, header := range r.GetHeaders() {
 		out.Header[name] = header.GetValues()
 	}
+
 	if body := r.GetBody(); len(body) > 0 {
 		out.Body = io.NopCloser(bytes.NewReader(body))
 	}
+
 	return out, nil
 }
 
@@ -120,16 +158,35 @@ type Request struct {
 var (
 	// ErrInvalidURL indicates a malformed or unsupported URL.
 	ErrInvalidURL = errors.New("invalid URL provided")
+
 	// ErrMarshalRequest wraps failures while encoding the request payload.
 	ErrMarshalRequest = errors.New("failed to create request")
+
 	// ErrReadBody wraps failures while reading a request body stream.
 	ErrReadBody = errors.New("failed to read request body")
+
 	// ErrUnmarshalResponse wraps failures while decoding the host response.
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
+
 	// ErrHostCall wraps errors returned from the waPC host call.
 	ErrHostCall = errors.New("host call failed")
+
+	// ErrHostResponseInvalid indicates the host returned an invalid or unexpected response.
+	ErrHostResponseInvalid = errors.New("host response is invalid or unexpected")
+
+	// ErrHostError indicates that the host reported a failure status.
+	ErrHostError = errors.New("host returned an error status")
+
 	// ErrInvalidMethod indicates an HTTP method not permitted by NewRequest.
 	ErrInvalidMethod = errors.New("invalid HTTP method")
+)
+
+const (
+	hostStatusOK       = int32(200)
+	hostStatusPartial  = int32(206)
+	hostStatusBadInput = int32(400)
+	hostStatusMissing  = int32(404)
+	hostStatusError    = int32(500)
 )
 
 // New creates a new HTTP client with the provided configuration.

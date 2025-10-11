@@ -32,7 +32,8 @@ func TestHTTPClient(t *testing.T) {
 	// canned response generator
 	createResponse := func() []byte {
 		resp := &proto.HTTPClientResponse{
-			Status: &sdkproto.Status{Status: "OK", Code: 200},
+			Status: &sdkproto.Status{Status: "Host OK", Code: 200},
+			Code:   200,
 			Headers: map[string]*proto.Header{
 				"Content-Type": {Values: []string{"application/json"}},
 			},

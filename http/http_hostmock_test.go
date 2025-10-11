@@ -20,7 +20,8 @@ import (
 // okResponse returns a standard 200 OK response with JSON body.
 func okResponse() []byte {
 	resp := &proto.HTTPClientResponse{
-		Status: &sdkproto.Status{Status: "OK", Code: 200},
+		Status: &sdkproto.Status{Status: "Host OK", Code: 200},
+		Code:   200,
 		Headers: map[string]*proto.Header{
 			"Content-Type": {Values: []string{"application/json"}},
 		},
@@ -277,35 +278,105 @@ func TestHTTPClientHostMock_UnmarshalFailures(t *testing.T) {
 }
 
 func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
-	// Validate that host status/code map correctly to Response fields.
+	// Validate HTTP status code/text derives from response.Code.
 	tt := []struct {
-		name        string
-		code        int
-		status, url string
+		name              string
+		httpCode          int
+		httpURL           string
+		hostStatusCode    int32
+		hostStatusMessage string
+		expectStatusText  string
+		expectErr         error
 	}{
-		{"200 OK", 200, "OK", "http://example.com/a"},
-		{"404 NotFound", 404, "Not Found", "http://example.com/missing"},
+		{
+			name:              "HTTP 404, host success",
+			httpCode:          404,
+			httpURL:           "http://example.com/missing",
+			hostStatusCode:    200,
+			hostStatusMessage: "host handled",
+			expectStatusText:  http.StatusText(404),
+		},
+		{
+			name:              "HTTP 200, host success",
+			httpCode:          200,
+			httpURL:           "http://example.com/ok",
+			hostStatusCode:    200,
+			hostStatusMessage: "host ok",
+			expectStatusText:  http.StatusText(200),
+		},
+		{
+			name:              "HTTP 0 keeps empty status",
+			httpCode:          0,
+			httpURL:           "http://example.com/weird",
+			hostStatusCode:    200,
+			hostStatusMessage: "still host ok",
+			expectStatusText:  "",
+		},
+		{
+			name:              "Host error",
+			httpCode:          500,
+			httpURL:           "http://example.com/fail",
+			hostStatusCode:    500,
+			hostStatusMessage: "host failure",
+			expectErr:         ErrHostError,
+		},
+		{
+			name:              "Host bad request",
+			httpCode:          200,
+			httpURL:           "http://example.com/bad",
+			hostStatusCode:    400,
+			hostStatusMessage: "bad input",
+			expectErr:         ErrHostError,
+		},
+		{
+			name:              "Host response missing status",
+			httpCode:          200,
+			httpURL:           "http://example.com/missing-status",
+			hostStatusCode:    -1,
+			hostStatusMessage: "",
+			expectErr:         ErrHostResponseInvalid,
+		},
+		{
+			name:              "Host unknown status code",
+			httpCode:          200,
+			httpURL:           "http://example.com/unknown-status",
+			hostStatusCode:    999,
+			hostStatusMessage: "mystery",
+			expectErr:         ErrHostResponseInvalid,
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			resp := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: tc.status, Code: int32(tc.code)}}
+			resp := &proto.HTTPClientResponse{Code: int32(tc.httpCode)}
+			if tc.hostStatusCode >= 0 {
+				resp.Status = &sdkproto.Status{Status: tc.hostStatusMessage, Code: tc.hostStatusCode}
+			}
 			b, _ := pb.Marshal(resp)
 			client, err := newClientWith(hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
 				ExpectedCapability: "httpclient",
 				ExpectedFunction:   "call",
 				Response:           func() []byte { return b },
-				PayloadValidator:   baselineValidator(http.MethodGet, tc.url, nil),
+				PayloadValidator:   baselineValidator(http.MethodGet, tc.httpURL, nil),
 			})
 			if err != nil {
 				t.Fatalf("client: %v", err)
 			}
-			r, err := client.Get(tc.url)
-			if err != nil {
-				t.Fatalf("unexpected err: %v", err)
+			r, err := client.Get(tc.httpURL)
+			if !errors.Is(err, tc.expectErr) {
+				t.Fatalf("expected error %v, got %v", tc.expectErr, err)
 			}
-			if r.StatusCode != tc.code || r.Status != tc.status {
-				t.Fatalf("want %d/%q got %d/%q", tc.code, tc.status, r.StatusCode, r.Status)
+			if tc.expectErr != nil {
+				return
+			}
+			if r == nil {
+				t.Fatalf("expected response, got nil")
+			}
+			if r.StatusCode != tc.httpCode {
+				t.Fatalf("status code: want %d got %d", tc.httpCode, r.StatusCode)
+			}
+			if r.Status != tc.expectStatusText {
+				t.Fatalf("status text: want %q got %q", tc.expectStatusText, r.Status)
 			}
 		})
 	}

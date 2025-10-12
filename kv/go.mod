@@ -1,6 +1,6 @@
 module github.com/tarmac-project/sdk/kv
 
-go 1.24.3
+go 1.23
 
 require (
 	github.com/tarmac-project/protobuf-go v0.0.0-20251004154304-968947a7ba38

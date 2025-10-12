@@ -1,6 +1,6 @@
 module github.com/tarmac-project/sdk/logging
 
-go 1.24.3
+go 1.23
 
 require (
 	github.com/tarmac-project/sdk v0.0.0

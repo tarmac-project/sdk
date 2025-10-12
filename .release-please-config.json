@@ -1,39 +1,67 @@
 {
+  "release-type": "go",
+  "draft": false,
+  "separate-pull-requests": false,
+  "tag-separator": "/",
+  "changelog-types": [
+    {"type": "feat", "section": "Features", "hidden": false},
+    {"type": "fix", "section": "Bug Fixes", "hidden": false},
+    {"type": "perf", "section": "Performance Improvements", "hidden": false},
+    {"type": "deps", "section": "Dependencies", "hidden": false},
+    {"type": "revert", "section": "Reverts", "hidden": false},
+    {"type": "docs", "section": "Documentation", "hidden": false},
+    {"type": "style", "section": "Styles", "hidden": true},
+    {"type": "chore", "section": "Miscellaneous Chores", "hidden": false},
+    {"type": "refactor", "section": "Code Refactoring", "hidden": false},
+    {"type": "test", "section": "Tests", "hidden": false},
+    {"type": "build", "section": "Build System", "hidden": false},
+    {"type": "ci", "section": "Continuous Integration", "hidden": false}
+  ],
   "packages": {
     ".": {
       "release-type": "go",
+      "package-name": "",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "extra-files": ["go.mod"],
+      "changelog-path": "CHANGELOG.md"
     },
     "hostmock": {
       "release-type": "go",
+      "package-name": "hostmock",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "extra-files": ["hostmock/go.mod"],
+      "changelog-path": "CHANGELOG.md"
     },
     "http": {
       "release-type": "go",
+      "package-name": "http",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "extra-files": ["http/go.mod"],
+      "changelog-path": "CHANGELOG.md"
     },
     "kv": {
       "release-type": "go",
+      "package-name": "kv",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "extra-files": ["kv/go.mod"],
+      "changelog-path": "CHANGELOG.md"
     },
     "logging": {
       "release-type": "go",
+      "package-name": "logging",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": true,
-      "draft": false,
-      "prerelease": false
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "extra-files": ["logging/go.mod"],
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"

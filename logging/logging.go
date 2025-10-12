@@ -1,22 +1,19 @@
 package logging
 
 import (
-	"errors"
-
 	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
 )
 
-// ErrNotImplemented signals that a logging operation is not yet wired to the host.
-var ErrNotImplemented = errors.New("logging: not implemented")
+const capabilityName = "logging"
 
 // Client exposes convenience helpers for sending log entries to the host runtime.
 type Client interface {
-	Info(message string) error
-	Warn(message string) error
-	Error(message string) error
-	Debug(message string) error
-	Trace(message string) error
+	Info(message string)
+	Warn(message string)
+	Error(message string)
+	Debug(message string)
+	Trace(message string)
 }
 
 // Config controls how a Client instance interacts with the host runtime.
@@ -52,8 +49,12 @@ func New(cfg Config) (Client, error) {
 	}, nil
 }
 
-func (c *client) Info(message string) error  { return ErrNotImplemented }
-func (c *client) Warn(message string) error  { return ErrNotImplemented }
-func (c *client) Error(message string) error { return ErrNotImplemented }
-func (c *client) Debug(message string) error { return ErrNotImplemented }
-func (c *client) Trace(message string) error { return ErrNotImplemented }
+func (c *client) Info(message string)  { c.log("Info", message) }
+func (c *client) Warn(message string)  { c.log("Warn", message) }
+func (c *client) Error(message string) { c.log("Error", message) }
+func (c *client) Debug(message string) { c.log("Debug", message) }
+func (c *client) Trace(message string) { c.log("Trace", message) }
+
+func (c *client) log(fn string, message string) {
+	_, _ = c.hostCall(c.runtime.Namespace, capabilityName, fn, []byte(message))
+}

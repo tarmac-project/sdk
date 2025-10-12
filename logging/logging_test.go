@@ -1,11 +1,12 @@
 package logging
 
 import (
-	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
 	sdk "github.com/tarmac-project/sdk"
+	"github.com/tarmac-project/sdk/hostmock"
 )
 
 func TestNew(t *testing.T) {
@@ -63,29 +64,51 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestClientMethodsNotImplemented(t *testing.T) {
+func TestClientLogMethods(t *testing.T) {
 	t.Parallel()
 
-	client, err := New(Config{})
-	if err != nil {
-		t.Fatalf("New returned error: %v", err)
-	}
+	const namespace = "loggy"
+	message := "mission accomplished"
 
 	tt := []struct {
-		name string
-		call func(Client) error
+		name   string
+		fn     string
+		invoke func(Client, string) error
 	}{
-		{"Info", func(c Client) error { return c.Info("msg") }},
-		{"Warn", func(c Client) error { return c.Warn("msg") }},
-		{"Error", func(c Client) error { return c.Error("msg") }},
-		{"Debug", func(c Client) error { return c.Debug("msg") }},
-		{"Trace", func(c Client) error { return c.Trace("msg") }},
+		{"Info", "Info", func(c Client, msg string) { c.Info(msg) }},
+		{"Warn", "Warn", func(c Client, msg string) { c.Warn(msg) }},
+		{"Error", "Error", func(c Client, msg string) { c.Error(msg) }},
+		{"Debug", "Debug", func(c Client, msg string) { c.Debug(msg) }},
+		{"Trace", "Trace", func(c Client, msg string) { c.Trace(msg) }},
 	}
 
 	for _, tc := range tt {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			if !errors.Is(tc.call(client), ErrNotImplemented) {
-				t.Fatalf("expected ErrNotImplemented for %s", tc.name)
+			var captured string
+
+			cfg := hostmock.Config{
+				ExpectedNamespace:  namespace,
+				ExpectedCapability: capabilityName,
+				ExpectedFunction:   tc.fn,
+				PayloadValidator: func(payload []byte) error {
+					captured = string(payload)
+					return nil
+				},
+			}
+			mock, err := hostmock.New(cfg)
+			if err != nil {
+				t.Fatalf("hostmock: %v", err)
+			}
+
+			client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mock.HostCall})
+			if err != nil {
+				t.Fatalf("New returned error: %v", err)
+			}
+
+			tc.invoke(client, message)
+			if captured != message {
+				t.Fatalf("expected captured payload %q, got %q", message, captured)
 			}
 		})
 	}

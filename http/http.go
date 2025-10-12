@@ -81,7 +81,7 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 
 	resp, err := c.hostCall(c.cfg.SDKConfig.Namespace, "httpclient", "call", b)
 	if err != nil {
-		return &Response{}, errors.Join(ErrHostCall, err)
+		return &Response{}, errors.Join(sdk.ErrHostCall, err)
 	}
 
 	var r proto.HTTPClientResponse
@@ -91,7 +91,7 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 
 	status := r.GetStatus()
 	if status == nil {
-		return &Response{}, ErrHostResponseInvalid
+		return &Response{}, sdk.ErrHostResponseInvalid
 	}
 
 	statusCode := status.GetCode()
@@ -103,10 +103,10 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 		if msg := status.GetStatus(); msg != "" {
 			detail = fmt.Sprintf("%s: %s", detail, msg)
 		}
-		return &Response{}, errors.Join(ErrHostError, fmt.Errorf("%s", detail))
+		return &Response{}, errors.Join(sdk.ErrHostError, errors.New(detail))
 	default:
 		return &Response{}, errors.Join(
-			ErrHostResponseInvalid,
+			sdk.ErrHostResponseInvalid,
 			fmt.Errorf("unexpected host status code %d", statusCode),
 		)
 	}
@@ -167,15 +167,6 @@ var (
 
 	// ErrUnmarshalResponse wraps failures while decoding the host response.
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
-
-	// ErrHostCall wraps errors returned from the waPC host call.
-	ErrHostCall = errors.New("host call failed")
-
-	// ErrHostResponseInvalid indicates the host returned an invalid or unexpected response.
-	ErrHostResponseInvalid = errors.New("host response is invalid or unexpected")
-
-	// ErrHostError indicates that the host reported a failure status.
-	ErrHostError = errors.New("host returned an error status")
 
 	// ErrInvalidMethod indicates an HTTP method not permitted by NewRequest.
 	ErrInvalidMethod = errors.New("invalid HTTP method")

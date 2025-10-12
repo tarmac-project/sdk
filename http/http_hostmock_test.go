@@ -237,8 +237,8 @@ func TestHTTPClientHostMock_HostFailures(t *testing.T) {
 				rdr = strings.NewReader(tc.body)
 			}
 			_, err = exec(client, tc.method, tc.url, tc.contentType, rdr, nil)
-			if err == nil || !errors.Is(err, ErrHostCall) {
-				t.Fatalf("want ErrHostCall got %v", err)
+			if err == nil || !errors.Is(err, sdk.ErrHostCall) {
+				t.Fatalf("want sdk.ErrHostCall got %v", err)
 			}
 		})
 	}
@@ -318,7 +318,7 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 			httpURL:           "http://example.com/fail",
 			hostStatusCode:    500,
 			hostStatusMessage: "host failure",
-			expectErr:         ErrHostError,
+			expectErr:         sdk.ErrHostError,
 		},
 		{
 			name:              "Host bad request",
@@ -326,7 +326,7 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 			httpURL:           "http://example.com/bad",
 			hostStatusCode:    400,
 			hostStatusMessage: "bad input",
-			expectErr:         ErrHostError,
+			expectErr:         sdk.ErrHostError,
 		},
 		{
 			name:              "Host response missing status",
@@ -334,7 +334,7 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 			httpURL:           "http://example.com/missing-status",
 			hostStatusCode:    -1,
 			hostStatusMessage: "",
-			expectErr:         ErrHostResponseInvalid,
+			expectErr:         sdk.ErrHostResponseInvalid,
 		},
 		{
 			name:              "Host unknown status code",
@@ -342,7 +342,7 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 			httpURL:           "http://example.com/unknown-status",
 			hostStatusCode:    999,
 			hostStatusMessage: "mystery",
-			expectErr:         ErrHostResponseInvalid,
+			expectErr:         sdk.ErrHostResponseInvalid,
 		},
 	}
 	for _, tc := range tt {

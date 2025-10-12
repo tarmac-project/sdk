@@ -23,6 +23,10 @@ You can also use the low-level hostmock to simulate hostcalls to Tarmac if you w
 
 ## 🚀 Getting Started
 
+### Prerequisites
+
+- Go 1.23 or newer
+
 Register your handler with the SDK:
 
 ```go

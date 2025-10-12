@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -37,18 +36,17 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: tc.namespace}, HostCall: tc.hostCall})
+			cli, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: tc.namespace}, HostCall: tc.hostCall})
 			if err != nil {
 				t.Fatalf("New returned error: %v", err)
 			}
 
-			impl, ok := client.(*client)
+			impl, ok := cli.(*client)
 			if !ok {
-				t.Fatalf("expected *client implementation, got %T", client)
+				t.Fatalf("expected *client implementation, got %T", cli)
 			}
 
 			if impl.runtime.Namespace != tc.wantNS {
@@ -73,7 +71,7 @@ func TestClientLogMethods(t *testing.T) {
 	tt := []struct {
 		name   string
 		fn     string
-		invoke func(Client, string) error
+		invoke func(Client, string)
 	}{
 		{"Info", "Info", func(c Client, msg string) { c.Info(msg) }},
 		{"Warn", "Warn", func(c Client, msg string) { c.Warn(msg) }},
@@ -83,8 +81,9 @@ func TestClientLogMethods(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var captured string
 
 			cfg := hostmock.Config{
@@ -101,12 +100,12 @@ func TestClientLogMethods(t *testing.T) {
 				t.Fatalf("hostmock: %v", err)
 			}
 
-			client, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mock.HostCall})
+			cli, err := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mock.HostCall})
 			if err != nil {
 				t.Fatalf("New returned error: %v", err)
 			}
 
-			tc.invoke(client, message)
+			tc.invoke(cli, message)
 			if captured != message {
 				t.Fatalf("expected captured payload %q, got %q", message, captured)
 			}

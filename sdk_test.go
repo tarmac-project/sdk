@@ -81,7 +81,7 @@ func TestSDK_Behavior(t *testing.T) {
 
 	t.Run("Config_Immutability", func(t *testing.T) {
 		got := s1.Config()
-		got.Namespace = "mutated" //nolint:govet,unusedwrite // verify Config() returns a copy
+		got.Namespace = "mutated" //nolint:govet // verify Config() returns a copy
 		if s1.Config().Namespace != "one" {
 			t.Fatalf("expected SDK namespace to remain 'one', got %q", s1.Config().Namespace)
 		}

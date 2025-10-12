@@ -342,7 +342,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("host failure"),
 				},
 				wantValue: nil,
-				wantErr:   ErrHostCall,
+				wantErr:   sdk.ErrHostCall,
 			},
 			{
 				name: "internal error",
@@ -367,7 +367,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 				},
 				wantValue: nil,
-				wantErr:   ErrHostError,
+				wantErr:   sdk.ErrHostError,
 			},
 			{
 				name: "key not found",
@@ -403,7 +403,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 				},
 				wantValue: nil,
-				wantErr:   ErrHostResponseInvalid,
+				wantErr:   sdk.ErrHostResponseInvalid,
 			},
 		}
 
@@ -479,7 +479,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Fail:               true,
 					Error:              errors.New("host failure"),
 				},
-				wantErr: ErrHostCall,
+				wantErr: sdk.ErrHostCall,
 			},
 			{
 				name:  "internal error",
@@ -497,7 +497,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return b
 					},
 				},
-				wantErr: ErrHostError,
+				wantErr: sdk.ErrHostError,
 			},
 			{
 				name:  "invalid payload",
@@ -515,7 +515,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return b
 					},
 				},
-				wantErr: ErrHostResponseInvalid,
+				wantErr: sdk.ErrHostResponseInvalid,
 			},
 			{
 				name:  "invalid response",
@@ -530,7 +530,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return []byte("invalid response")
 					},
 				},
-				wantErr: ErrHostResponseInvalid,
+				wantErr: sdk.ErrHostResponseInvalid,
 			},
 		}
 
@@ -591,7 +591,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Fail:               true,
 					Error:              errors.New("host failure"),
 				},
-				wantErr: ErrHostCall,
+				wantErr: sdk.ErrHostCall,
 			},
 			{
 				name: "internal error",
@@ -608,7 +608,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return b
 					},
 				},
-				wantErr: ErrHostError,
+				wantErr: sdk.ErrHostError,
 			},
 			{
 				name: "invalid response",
@@ -622,7 +622,7 @@ func TestKVClientHostMock(t *testing.T) {
 						return []byte("invalid response")
 					},
 				},
-				wantErr: ErrHostResponseInvalid,
+				wantErr: sdk.ErrHostResponseInvalid,
 			},
 		}
 
@@ -682,7 +682,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("host failure"),
 				},
 				wantKeys: nil,
-				wantErr:  ErrHostCall,
+				wantErr:  sdk.ErrHostCall,
 			},
 			{
 				name: "internal error",
@@ -701,7 +701,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 				},
 				wantKeys: nil,
-				wantErr:  ErrHostError,
+				wantErr:  sdk.ErrHostError,
 			},
 		}
 

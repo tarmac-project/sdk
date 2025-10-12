@@ -65,15 +65,6 @@ var (
 
 	// ErrKeyNotFound indicates that the requested key does not exist.
 	ErrKeyNotFound = errors.New("key not found in store")
-
-	// ErrHostResponseInvalid indicates that the host returned an invalid or unexpected response.
-	ErrHostResponseInvalid = errors.New("host response is invalid or unexpected")
-
-	// ErrHostCall indicates that the waPC host call failed.
-	ErrHostCall = errors.New("host call failed")
-
-	// ErrHostError indicates that the host returned an error status.
-	ErrHostError = errors.New("host returned an error status")
 )
 
 const (
@@ -127,16 +118,16 @@ func (c *client) Get(key string) ([]byte, error) {
 	// Issue the host call and always inspect the payload.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "get", b)
 	if callErr != nil && len(respBytes) == 0 {
-		return nil, errors.Join(ErrHostCall, callErr)
+		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}
 
 	// Attempt to unmarshal whatever the host returned.
 	var resp kvstore.KVStoreGetResponse
 	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
 		if callErr != nil {
-			return nil, errors.Join(ErrHostCall, callErr, ErrHostResponseInvalid, unmarshalErr)
+			return nil, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
-		return nil, errors.Join(ErrHostResponseInvalid, unmarshalErr)
+		return nil, errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
 	}
 
 	status := resp.GetStatus()
@@ -150,12 +141,12 @@ func (c *client) Get(key string) ([]byte, error) {
 
 	if status != nil && status.GetCode() == statusError {
 		if callErr != nil {
-			return nil, errors.Join(ErrHostError, callErr)
+			return nil, errors.Join(sdk.ErrHostError, callErr)
 		}
-		return nil, ErrHostError
+		return nil, sdk.ErrHostError
 	}
 
-	return nil, ErrHostResponseInvalid
+	return nil, sdk.ErrHostResponseInvalid
 }
 
 // Set stores value under key. It returns ErrInvalidKey or ErrInvalidValue
@@ -180,16 +171,16 @@ func (c *client) Set(key string, value []byte) error {
 	// Issue the host call and inspect the payload even on error
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "set", b)
 	if callErr != nil && (len(respBytes) == 0) {
-		return errors.Join(ErrHostCall, callErr)
+		return errors.Join(sdk.ErrHostCall, callErr)
 	}
 
 	// Unmarshal the response from the host
 	var resp kvstore.KVStoreSetResponse
 	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
 		if callErr != nil {
-			return errors.Join(ErrHostCall, callErr, ErrHostResponseInvalid, unmarshalErr)
+			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
-		return errors.Join(ErrHostResponseInvalid, unmarshalErr)
+		return errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
 	}
 
 	status := resp.GetStatus()
@@ -199,12 +190,12 @@ func (c *client) Set(key string, value []byte) error {
 
 	if status != nil && status.GetCode() == statusError {
 		if callErr != nil {
-			return errors.Join(ErrHostError, callErr)
+			return errors.Join(sdk.ErrHostError, callErr)
 		}
-		return ErrHostError
+		return sdk.ErrHostError
 	}
 
-	return ErrHostResponseInvalid
+	return sdk.ErrHostResponseInvalid
 }
 
 // Delete removes key from the store. Deleting a non-existent key is not an error.
@@ -224,16 +215,16 @@ func (c *client) Delete(key string) error {
 	// Invoke the host; keep the bytes for status parsing even when an error is returned.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "delete", b)
 	if callErr != nil && len(respBytes) == 0 {
-		return errors.Join(ErrHostCall, callErr)
+		return errors.Join(sdk.ErrHostCall, callErr)
 	}
 
 	// Decode the payload; surface both host and decoding errors when applicable.
 	var resp kvstore.KVStoreDeleteResponse
 	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
 		if callErr != nil {
-			return errors.Join(ErrHostCall, callErr, ErrHostResponseInvalid, unmarshalErr)
+			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
-		return errors.Join(ErrHostResponseInvalid, unmarshalErr)
+		return errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
 	}
 
 	status := resp.GetStatus()
@@ -243,12 +234,12 @@ func (c *client) Delete(key string) error {
 
 	if status != nil && status.GetCode() == statusError {
 		if callErr != nil {
-			return errors.Join(ErrHostError, callErr)
+			return errors.Join(sdk.ErrHostError, callErr)
 		}
-		return ErrHostError
+		return sdk.ErrHostError
 	}
 
-	return ErrHostResponseInvalid
+	return sdk.ErrHostResponseInvalid
 }
 
 // Keys returns a snapshot of keys currently in the store.
@@ -263,16 +254,16 @@ func (c *client) Keys() ([]string, error) {
 	// Execute the host call; retain bytes even when the host reports an error.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "keys", b)
 	if callErr != nil && len(respBytes) == 0 {
-		return nil, errors.Join(ErrHostCall, callErr)
+		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}
 
 	// Decode the protobuf payload and combine errors if both occur.
 	var resp kvstore.KVStoreKeysResponse
 	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
 		if callErr != nil {
-			return nil, errors.Join(ErrHostCall, callErr, ErrHostResponseInvalid, unmarshalErr)
+			return nil, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
-		return nil, errors.Join(ErrHostResponseInvalid, unmarshalErr)
+		return nil, errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
 	}
 
 	status := resp.GetStatus()
@@ -282,10 +273,10 @@ func (c *client) Keys() ([]string, error) {
 
 	if status != nil && status.GetCode() == statusError {
 		if callErr != nil {
-			return nil, errors.Join(ErrHostError, callErr)
+			return nil, errors.Join(sdk.ErrHostError, callErr)
 		}
-		return nil, ErrHostError
+		return nil, sdk.ErrHostError
 	}
 
-	return nil, ErrHostResponseInvalid
+	return nil, sdk.ErrHostResponseInvalid
 }

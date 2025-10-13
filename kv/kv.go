@@ -51,6 +51,9 @@ type client struct {
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// Ensure client implements the Client interface at compile time.
+var _ Client = (*client)(nil)
+
 // Config returns a copy of the runtime configuration.
 func (c *client) Config() sdk.RuntimeConfig {
 	return c.runtime

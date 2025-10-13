@@ -170,6 +170,7 @@ func TestHTTPClient(t *testing.T) {
 			request     *Request
 			expectedErr error
 		}{
+			{"Do with nil request", nil, ErrNilRequest},
 			{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
 			{"Do with no shceme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, nil},
 			{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, nil},
@@ -218,6 +219,48 @@ func TestHTTPClient(t *testing.T) {
 					t.Errorf("expected status code %d, got %d", http.StatusOK, resp2.StatusCode)
 				}
 			})
+		}
+	})
+
+	t.Run("Post without content type omits header", func(t *testing.T) {
+		var captured proto.HTTPClient
+
+		client, err := New(Config{
+			SDKConfig: sdk.RuntimeConfig{Namespace: "tarmac"},
+			HostCall: func(namespace, capability, function string, payload []byte) ([]byte, error) {
+				if namespace != "tarmac" {
+					t.Fatalf("unexpected namespace: %s", namespace)
+				}
+				if capability != "httpclient" || function != "call" {
+					t.Fatalf("unexpected routing: %s/%s", capability, function)
+				}
+
+				if err := pb.Unmarshal(payload, &captured); err != nil {
+					t.Fatalf("failed to unmarshal payload: %v", err)
+				}
+
+				resp := &proto.HTTPClientResponse{
+					Status: &sdkproto.Status{Code: 200},
+					Code:   200,
+				}
+				b, marshalErr := pb.Marshal(resp)
+				if marshalErr != nil {
+					return nil, marshalErr
+				}
+
+				return b, nil
+			},
+		})
+		if err != nil {
+			t.Fatalf("failed to create client: %v", err)
+		}
+
+		if _, err := client.Post("http://example.com", "", strings.NewReader("body")); err != nil {
+			t.Fatalf("unexpected error posting without content type: %v", err)
+		}
+
+		if _, ok := captured.GetHeaders()["Content-Type"]; ok {
+			t.Fatalf("expected Content-Type header to be omitted, got %v", captured.GetHeaders())
 		}
 	})
 }

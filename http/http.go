@@ -71,6 +71,9 @@ type httpClient struct {
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// Ensure httpClient always satisfies the Client interface at compile time.
+var _ Client = (*httpClient)(nil)
+
 // doHTTPCall marshals the protobuf request, performs the host call, and
 // unmarshals the response into a Response using proto getters.
 func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
@@ -170,6 +173,9 @@ var (
 
 	// ErrInvalidMethod indicates an HTTP method not permitted by NewRequest.
 	ErrInvalidMethod = errors.New("invalid HTTP method")
+
+	// ErrNilRequest indicates Do received a nil Request pointer.
+	ErrNilRequest = errors.New("request is nil")
 )
 
 const (
@@ -234,14 +240,16 @@ func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response
 	}
 
 	// Create the Protobuf request
+	headers := make(map[string]*proto.Header)
+	if contentType != "" {
+		headers["Content-Type"] = &proto.Header{Values: []string{contentType}}
+	}
 	req := &proto.HTTPClient{
 		Method:   "POST",
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
-		Headers: map[string]*proto.Header{
-			"Content-Type": {Values: []string{contentType}},
-		},
+		Headers:  headers,
 	}
 	return c.doHTTPCall(req)
 }
@@ -264,14 +272,16 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 	}
 
 	// Create the Protobuf request
+	headers := make(map[string]*proto.Header)
+	if contentType != "" {
+		headers["Content-Type"] = &proto.Header{Values: []string{contentType}}
+	}
 	req := &proto.HTTPClient{
 		Method:   "PUT",
 		Url:      urlStr,
 		Insecure: c.cfg.InsecureSkipVerify,
 		Body:     bodyBytes,
-		Headers: map[string]*proto.Header{
-			"Content-Type": {Values: []string{contentType}},
-		},
+		Headers:  headers,
 	}
 	return c.doHTTPCall(req)
 }
@@ -296,10 +306,15 @@ func (c *httpClient) Delete(urlStr string) (*Response, error) {
 
 // Do issues a custom request built with NewRequest and returns the response.
 func (c *httpClient) Do(req *Request) (*Response, error) {
+	if req == nil {
+		return &Response{}, ErrNilRequest
+	}
+
 	// Read the body content if present
 	var bodyBytes []byte
 	var err error
 	if req.Body != nil {
+		defer func() { _ = req.Body.Close() }()
 		bodyBytes, err = io.ReadAll(req.Body)
 		if err != nil {
 			return &Response{}, errors.Join(ErrReadBody, err)

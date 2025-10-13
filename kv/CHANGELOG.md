@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/tarmac-project/sdk/compare/kv/v0.1.1...kv/v0.1.2) (2025-10-13)
+
+
+### Bug Fixes
+
+* bump internal modules ([#26](https://github.com/tarmac-project/sdk/issues/26)) ([b3651b8](https://github.com/tarmac-project/sdk/commit/b3651b8221b36812bdde112e774b0f40392a2f13))
+
 ## [0.1.1](https://github.com/tarmac-project/sdk/compare/kv/v0.1.0...kv/v0.1.1) (2025-10-13)
 
 

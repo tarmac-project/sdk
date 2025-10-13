@@ -31,6 +31,9 @@ type client struct {
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
+// Ensure client implements the Client interface at compile time.
+var _ Client = (*client)(nil)
+
 // New creates a Client that emits logs through the configured host capability.
 func New(cfg Config) (Client, error) {
 	runtimeCfg := cfg.SDKConfig

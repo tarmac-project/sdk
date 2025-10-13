@@ -210,6 +210,20 @@ func TestHostMock(t *testing.T) {
 			want:       nil,
 			wantErr:    ErrUnexpectedFunction,
 		},
+		{
+			name: "Blank expectations allow wildcard calls",
+			cfg: Config{
+				Response: func() []byte {
+					return []byte("ok")
+				},
+			},
+			namespace:  "any-namespace",
+			capability: "any-capability",
+			function:   "any-function",
+			payload:    []byte("payload"),
+			want:       []byte("ok"),
+			wantErr:    nil,
+		},
 	}
 
 	for _, tc := range tt {

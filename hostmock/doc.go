@@ -7,7 +7,7 @@ needing a real host running. No real hosts were harmed in the making of these te
 
 Why use hostmock?
 
-  - Validate routing: ensure calls use the expected namespace, capability, and function.
+  - Validate routing: ensure calls use the expected namespace, capability, and function when you set them.
   - Inspect payloads: plug in a PayloadValidator to assert protobuf contents.
   - Script responses: return custom bytes or simulate failures.
 
@@ -46,5 +46,6 @@ Tips
   - Use table-driven tests for different routing and payload cases.
   - Keep the validator small and focused-decode, assert, return.
   - Prefer component mocks unless you truly need wire-level checks.
+  - Leave fields blank when you want a wildcard—hostmock only enforces values you set.
 */
 package hostmock

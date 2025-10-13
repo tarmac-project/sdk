@@ -8,6 +8,6 @@ use (
 	./logging
 )
 
-replace github.com/tarmac-project/sdk v0.0.0 => ./
+replace github.com/tarmac-project/sdk v0.1.1 => ./
 
-replace github.com/tarmac-project/sdk/hostmock v0.0.0 => ./hostmock
+replace github.com/tarmac-project/sdk/hostmock v0.1.1 => ./hostmock

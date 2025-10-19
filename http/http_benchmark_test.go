@@ -12,7 +12,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-	pb "google.golang.org/protobuf/proto"
 )
 
 // okBenchResponse returns a small, valid protobuf response for happy-path benches.
@@ -22,7 +21,7 @@ func okBenchResponse() []byte {
 		Headers: map[string]*proto.Header{"Content-Type": {Values: []string{"application/json"}}},
 		Body:    []byte(`{"message":"success"}`),
 	}
-	b, _ := pb.Marshal(resp)
+	b, _ := resp.MarshalVT()
 	return b
 }
 

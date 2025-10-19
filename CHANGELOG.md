@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/tarmac-project/sdk/compare/v0.1.2...v0.1.3) (2025-10-19)
+
+
+### Bug Fixes
+
+* **docs:** introduce vtproto helpers ([#31](https://github.com/tarmac-project/sdk/issues/31)) ([d0f31ef](https://github.com/tarmac-project/sdk/commit/d0f31efb82e72bf1cbbac5bdbbdc0dd9e92cc187))
+
 ## [0.1.2](https://github.com/tarmac-project/sdk/compare/v0.1.1...v0.1.2) (2025-10-13)
 
 

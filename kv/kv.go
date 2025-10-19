@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tarmac-project/protobuf-go/sdk/kvstore"
+	kvstore "github.com/tarmac-project/protobuf-go/sdk/kvstore"
 	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
-	pb "google.golang.org/protobuf/proto"
 )
 
 // Client represents a key-value capability client.
@@ -113,7 +112,7 @@ func (c *client) Get(key string) ([]byte, error) {
 
 	// Construct and marshal the get request
 	req := &kvstore.KVStoreGet{Key: key}
-	b, err := pb.Marshal(req)
+	b, err := req.MarshalVT()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal get request: %w", err)
 	}
@@ -126,7 +125,7 @@ func (c *client) Get(key string) ([]byte, error) {
 
 	// Attempt to unmarshal whatever the host returned.
 	var resp kvstore.KVStoreGetResponse
-	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
 			return nil, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
@@ -166,7 +165,7 @@ func (c *client) Set(key string, value []byte) error {
 
 	// Construct and marshal the set request
 	req := &kvstore.KVStoreSet{Key: key, Data: value}
-	b, err := pb.Marshal(req)
+	b, err := req.MarshalVT()
 	if err != nil {
 		return fmt.Errorf("failed to marshal set request: %w", err)
 	}
@@ -179,7 +178,7 @@ func (c *client) Set(key string, value []byte) error {
 
 	// Unmarshal the response from the host
 	var resp kvstore.KVStoreSetResponse
-	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
 			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
@@ -210,7 +209,7 @@ func (c *client) Delete(key string) error {
 
 	// Marshal the delete request for the host capability.
 	req := &kvstore.KVStoreDelete{Key: key}
-	b, err := pb.Marshal(req)
+	b, err := req.MarshalVT()
 	if err != nil {
 		return fmt.Errorf("failed to marshal delete request: %w", err)
 	}
@@ -223,7 +222,7 @@ func (c *client) Delete(key string) error {
 
 	// Decode the payload; surface both host and decoding errors when applicable.
 	var resp kvstore.KVStoreDeleteResponse
-	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
 			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}
@@ -249,7 +248,7 @@ func (c *client) Delete(key string) error {
 func (c *client) Keys() ([]string, error) {
 	// Build a request that asks the host to return a protobuf-encoded key list.
 	req := &kvstore.KVStoreKeys{ReturnProto: true}
-	b, err := pb.Marshal(req)
+	b, err := req.MarshalVT()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal keys request: %w", err)
 	}
@@ -262,7 +261,7 @@ func (c *client) Keys() ([]string, error) {
 
 	// Decode the protobuf payload and combine errors if both occur.
 	var resp kvstore.KVStoreKeysResponse
-	if unmarshalErr := pb.Unmarshal(respBytes, &resp); unmarshalErr != nil {
+	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
 			return nil, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
 		}

@@ -11,7 +11,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
-	pb "google.golang.org/protobuf/proto"
 )
 
 // validMethods lists HTTP methods accepted by NewRequest.
@@ -77,7 +76,7 @@ var _ Client = (*httpClient)(nil)
 // doHTTPCall marshals the protobuf request, performs the host call, and
 // unmarshals the response into a Response using proto getters.
 func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
-	b, err := pb.Marshal(req)
+	b, err := req.MarshalVT()
 	if err != nil {
 		return &Response{}, errors.Join(ErrMarshalRequest, err)
 	}
@@ -88,7 +87,7 @@ func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 	}
 
 	var r proto.HTTPClientResponse
-	if unmarshalErr := pb.Unmarshal(resp, &r); unmarshalErr != nil {
+	if unmarshalErr := r.UnmarshalVT(resp); unmarshalErr != nil {
 		return &Response{}, errors.Join(ErrUnmarshalResponse, unmarshalErr)
 	}
 

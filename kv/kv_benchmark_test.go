@@ -7,7 +7,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/kvstore"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-	pb "google.golang.org/protobuf/proto"
 )
 
 func BenchmarkKVClient(b *testing.B) {
@@ -20,7 +19,7 @@ func BenchmarkKVClient(b *testing.B) {
 			Status: &sdkproto.Status{Status: "OK", Code: 0},
 			Data:   []byte("value"),
 		}
-		bz, _ := pb.Marshal(resp)
+		bz, _ := resp.MarshalVT()
 		return bz
 	}
 	mockGet, _ := hostmock.New(hostmock.Config{
@@ -43,7 +42,7 @@ func BenchmarkKVClient(b *testing.B) {
 	// Pre-marshal a happy-path SET response
 	setResp := func() []byte {
 		resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
-		bz, _ := pb.Marshal(resp)
+		bz, _ := resp.MarshalVT()
 		return bz
 	}
 	mockSet, _ := hostmock.New(hostmock.Config{
@@ -66,7 +65,7 @@ func BenchmarkKVClient(b *testing.B) {
 	// Pre-marshal a happy-path DELETE response
 	delResp := func() []byte {
 		resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 0}}
-		bz, _ := pb.Marshal(resp)
+		bz, _ := resp.MarshalVT()
 		return bz
 	}
 	mockDel, _ := hostmock.New(hostmock.Config{
@@ -92,7 +91,7 @@ func BenchmarkKVClient(b *testing.B) {
 			Status: &sdkproto.Status{Status: "OK", Code: 0},
 			Keys:   []string{"a", "b", "c"},
 		}
-		bz, _ := pb.Marshal(resp)
+		bz, _ := resp.MarshalVT()
 		return bz
 	}
 	mockKeys, _ := hostmock.New(hostmock.Config{

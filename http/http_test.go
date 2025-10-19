@@ -12,7 +12,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-	pb "google.golang.org/protobuf/proto"
 
 	"github.com/madflojo/testlazy/things/testurl"
 )
@@ -39,7 +38,7 @@ func TestHTTPClient(t *testing.T) {
 			},
 			Body: []byte(`{"message":"success"}`),
 		}
-		b, _ := pb.Marshal(resp)
+		b, _ := resp.MarshalVT()
 		return b
 	}
 
@@ -235,7 +234,7 @@ func TestHTTPClient(t *testing.T) {
 					t.Fatalf("unexpected routing: %s/%s", capability, function)
 				}
 
-				if err := pb.Unmarshal(payload, &captured); err != nil {
+				if err := captured.UnmarshalVT(payload); err != nil {
 					t.Fatalf("failed to unmarshal payload: %v", err)
 				}
 
@@ -243,7 +242,7 @@ func TestHTTPClient(t *testing.T) {
 					Status: &sdkproto.Status{Code: 200},
 					Code:   200,
 				}
-				b, marshalErr := pb.Marshal(resp)
+				b, marshalErr := resp.MarshalVT()
 				if marshalErr != nil {
 					return nil, marshalErr
 				}

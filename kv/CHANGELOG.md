@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/tarmac-project/sdk/compare/kv/v0.1.2...kv/v0.1.3) (2025-10-19)
+
+
+### Code Refactoring
+
+* **proto:** align with vtprotobuf helpers ([#29](https://github.com/tarmac-project/sdk/pull/29)) ([f0dec79](https://github.com/tarmac-project/sdk/commit/f0dec7975121ccfe4dec24d8d62f14b031b6d3eb))
+
 ## [0.1.2](https://github.com/tarmac-project/sdk/compare/kv/v0.1.1...kv/v0.1.2) (2025-10-13)
 
 

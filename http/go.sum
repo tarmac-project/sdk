@@ -4,8 +4,8 @@ github.com/madflojo/testlazy/things/testurl v1.2.0 h1:yQkEX4L2dQkxEG6eii/cGIIpeA
 github.com/madflojo/testlazy/things/testurl v1.2.0/go.mod h1:Kj/KFM34bvfnmaDzB+9IOGCxtsWwjymxomFJkBZEb8w=
 github.com/tarmac-project/protobuf-go v0.0.0-20251018194459-da5e9a58aa3f h1:ej3NiKuKuy8QT1z5v664VVwgSymWu0s9iQh1DeCzArY=
 github.com/tarmac-project/protobuf-go v0.0.0-20251018194459-da5e9a58aa3f/go.mod h1:ZF7p3bE27AqFkb5JeOsnIPZAiihzggZjgOlyPLdiF40=
-github.com/tarmac-project/sdk v0.1.1 h1:2cwu5iFXCiAb98L5olNKM4gA2D40sLSacfnB9pr8ftM=
-github.com/tarmac-project/sdk v0.1.1/go.mod h1:G1FkDLzCzIuAhKbCfzbqeOpB3eBAS0tmMCeb5q0ID0s=
+github.com/tarmac-project/sdk v0.1.3 h1:aYRPsDmseIF0pUzDKbpOMu5Igb++rXn0UbcA9bnT6LE=
+github.com/tarmac-project/sdk v0.1.3/go.mod h1:G1FkDLzCzIuAhKbCfzbqeOpB3eBAS0tmMCeb5q0ID0s=
 github.com/tarmac-project/sdk/hostmock v0.1.1 h1:jXpfWJl5C7DHZve5r9gPcZMXA/rTkCYQjQnNznvZQdk=
 github.com/tarmac-project/sdk/hostmock v0.1.1/go.mod h1:/P5qk7whFjWK1M7iH7kLad9eFsvWc9vWEe64zB1XrbI=
 github.com/wapc/wapc-guest-tinygo v0.3.3 h1:jLebiwjVSHLGnS+BRabQ6+XOV7oihVWAc05Hf1SbeR0=

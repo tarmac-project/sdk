@@ -11,7 +11,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/kvstore"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-	pb "google.golang.org/protobuf/proto"
 )
 
 func TestNew(t *testing.T) {
@@ -105,7 +104,7 @@ func TestKVInterface(t *testing.T) {
 				"set": {
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreSet
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key1" {
@@ -118,14 +117,14 @@ func TestKVInterface(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
 				"get": {
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreGet
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key1" {
@@ -138,14 +137,14 @@ func TestKVInterface(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Data:   []byte("testdata"),
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
 				"delete": {
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreDelete
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key1" {
@@ -155,7 +154,7 @@ func TestKVInterface(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -165,7 +164,7 @@ func TestKVInterface(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"key1"},
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -189,7 +188,7 @@ func TestKVInterface(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{},
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -210,7 +209,7 @@ func TestKVInterface(t *testing.T) {
 				"get": {
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreGet
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key3" {
@@ -220,14 +219,14 @@ func TestKVInterface(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreGetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}, Data: nil}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
 				"delete": {
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreDelete
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key3" {
@@ -237,7 +236,7 @@ func TestKVInterface(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -247,7 +246,7 @@ func TestKVInterface(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"key3"},
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -324,7 +323,7 @@ func TestKVClientHostMock(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Data:   []byte("value1"),
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -358,12 +357,12 @@ func TestKVClientHostMock(t *testing.T) {
 							Status: &sdkproto.Status{Status: "Internal", Code: 500},
 							Data:   nil,
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreGet
-						return pb.Unmarshal(payload, &req)
+						return req.UnmarshalVT(payload)
 					},
 				},
 				wantValue: nil,
@@ -383,7 +382,7 @@ func TestKVClientHostMock(t *testing.T) {
 							Status: &sdkproto.Status{Status: "NotFound", Code: 404},
 							Data:   nil,
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -449,7 +448,7 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedFunction:   "set",
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreSet
-						if err := pb.Unmarshal(payload, &req); err != nil {
+						if err := req.UnmarshalVT(payload); err != nil {
 							return err
 						}
 						if req.GetKey() != "key1" {
@@ -462,7 +461,7 @@ func TestKVClientHostMock(t *testing.T) {
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -493,7 +492,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("internal error"),
 					Response: func() []byte {
 						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "Internal", Code: 500}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -511,7 +510,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("invalid"),
 					Response: func() []byte {
 						resp := &proto.KVStoreSetResponse{Status: &sdkproto.Status{Status: "Invalid", Code: 400}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -571,11 +570,11 @@ func TestKVClientHostMock(t *testing.T) {
 					ExpectedFunction:   "delete",
 					PayloadValidator: func(payload []byte) error {
 						var req proto.KVStoreDelete
-						return pb.Unmarshal(payload, &req)
+						return req.UnmarshalVT(payload)
 					},
 					Response: func() []byte {
 						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -604,7 +603,7 @@ func TestKVClientHostMock(t *testing.T) {
 					Error:              errors.New("internal error"),
 					Response: func() []byte {
 						resp := &proto.KVStoreDeleteResponse{Status: &sdkproto.Status{Status: "Internal", Code: 500}}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -665,7 +664,7 @@ func TestKVClientHostMock(t *testing.T) {
 							Status: &sdkproto.Status{Status: "OK", Code: 200},
 							Keys:   []string{"a", "b", "c"},
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},
@@ -696,7 +695,7 @@ func TestKVClientHostMock(t *testing.T) {
 						resp := &proto.KVStoreKeysResponse{
 							Status: &sdkproto.Status{Status: "Internal", Code: 500},
 						}
-						b, _ := pb.Marshal(resp)
+						b, _ := resp.MarshalVT()
 						return b
 					},
 				},

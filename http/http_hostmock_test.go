@@ -13,7 +13,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-	pb "google.golang.org/protobuf/proto"
 )
 
 // Common canned responses used by hostmock tests.
@@ -27,7 +26,7 @@ func okResponse() []byte {
 		},
 		Body: []byte(`{"message":"success"}`),
 	}
-	b, _ := pb.Marshal(resp)
+	b, _ := resp.MarshalVT()
 	return b
 }
 
@@ -45,7 +44,7 @@ func newClientWith(host hostmock.Config) (Client, error) {
 func baselineValidator(method, url string, expectedBody []byte) func([]byte) error {
 	return func(payload []byte) error {
 		var req proto.HTTPClient
-		if err := pb.Unmarshal(payload, &req); err != nil {
+		if err := req.UnmarshalVT(payload); err != nil {
 			return fmt.Errorf("could not unmarshal payload: %w", err)
 		}
 		if req.GetMethod() != method {
@@ -166,7 +165,7 @@ func TestHTTPClientHostMock_HappyPaths(t *testing.T) {
 						return err
 					}
 					var req proto.HTTPClient
-					if err := pb.Unmarshal(p, &req); err != nil {
+					if err := req.UnmarshalVT(p); err != nil {
 						return err
 					}
 					for wantK, wantV := range hv {
@@ -351,7 +350,7 @@ func TestHTTPClientHostMock_StatusCodes(t *testing.T) {
 			if tc.hostStatusCode >= 0 {
 				resp.Status = &sdkproto.Status{Status: tc.hostStatusMessage, Code: tc.hostStatusCode}
 			}
-			b, _ := pb.Marshal(resp)
+			b, _ := resp.MarshalVT()
 			client, err := newClientWith(hostmock.Config{
 				ExpectedNamespace:  sdk.DefaultNamespace,
 				ExpectedCapability: "httpclient",
@@ -387,7 +386,7 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 	validateInsecure := func(expected bool) func([]byte) error {
 		return func(p []byte) error {
 			var req proto.HTTPClient
-			if err := pb.Unmarshal(p, &req); err != nil {
+			if err := req.UnmarshalVT(p); err != nil {
 				return err
 			}
 			if req.GetInsecure() != expected {
@@ -431,7 +430,7 @@ func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {
 	// Response with no body
 	statusOnly := func() []byte {
 		r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-		b, _ := pb.Marshal(r)
+		b, _ := r.MarshalVT()
 		return b
 	}
 
@@ -493,7 +492,7 @@ func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {
 			ExpectedFunction:   "call",
 			Response: func() []byte {
 				r := &proto.HTTPClientResponse{Status: &sdkproto.Status{Status: "OK", Code: 200}}
-				b, _ := pb.Marshal(r)
+				b, _ := r.MarshalVT()
 				return b
 			},
 			PayloadValidator: baselineValidator(http.MethodHead, "http://example.com", nil),

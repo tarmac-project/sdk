@@ -23,6 +23,7 @@ issues:
 
 formatters:
   enable:
+    - fieldalignment # checks struct field alignment
     - goimports # checks if the code and import statements are formatted according to the 'goimports' command
     - golines # checks if code is formatted, and fixes long lines
 

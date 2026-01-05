@@ -6,6 +6,7 @@ use (
 	./http
 	./kv
 	./logging
+	./sql
 )
 
 replace github.com/tarmac-project/sdk v0.1.1 => ./

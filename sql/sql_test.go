@@ -10,12 +10,6 @@ import (
 	"github.com/tarmac-project/sdk/hostmock"
 )
 
-const (
-	capabilityName = "sql"
-	fnExec         = "exec"
-	fnQuery        = "query"
-)
-
 func TestNew_DefaultNamespace(t *testing.T) {
 	t.Parallel()
 

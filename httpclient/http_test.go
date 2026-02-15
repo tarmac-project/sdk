@@ -1,4 +1,4 @@
-package http
+package httpclient
 
 import (
 	"errors"
@@ -224,7 +224,7 @@ func TestHTTPClient(t *testing.T) {
 	t.Run("Post without content type omits header", func(t *testing.T) {
 		var captured proto.HTTPClient
 
-		client, err := New(Config{
+		cli, newErr := New(Config{
 			SDKConfig: sdk.RuntimeConfig{Namespace: "tarmac"},
 			HostCall: func(namespace, capability, function string, payload []byte) ([]byte, error) {
 				if namespace != "tarmac" {
@@ -234,8 +234,8 @@ func TestHTTPClient(t *testing.T) {
 					t.Fatalf("unexpected routing: %s/%s", capability, function)
 				}
 
-				if err := captured.UnmarshalVT(payload); err != nil {
-					t.Fatalf("failed to unmarshal payload: %v", err)
+				if unmarshalErr := captured.UnmarshalVT(payload); unmarshalErr != nil {
+					t.Fatalf("failed to unmarshal payload: %v", unmarshalErr)
 				}
 
 				resp := &proto.HTTPClientResponse{
@@ -250,12 +250,12 @@ func TestHTTPClient(t *testing.T) {
 				return b, nil
 			},
 		})
-		if err != nil {
-			t.Fatalf("failed to create client: %v", err)
+		if newErr != nil {
+			t.Fatalf("failed to create client: %v", newErr)
 		}
 
-		if _, err := client.Post("http://example.com", "", strings.NewReader("body")); err != nil {
-			t.Fatalf("unexpected error posting without content type: %v", err)
+		if _, postErr := cli.Post("http://example.com", "", strings.NewReader("body")); postErr != nil {
+			t.Fatalf("unexpected error posting without content type: %v", postErr)
 		}
 
 		if _, ok := captured.GetHeaders()["Content-Type"]; ok {

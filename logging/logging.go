@@ -25,17 +25,17 @@ type Config struct {
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
-// client implements Client using the configured host call entrypoint.
-type client struct {
+// HostLogger implements Client using the configured host call entrypoint.
+type HostLogger struct {
 	runtime  sdk.RuntimeConfig
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
 // Ensure client implements the Client interface at compile time.
-var _ Client = (*client)(nil)
+var _ Client = (*HostLogger)(nil)
 
 // New creates a Client that emits logs through the configured host capability.
-func New(cfg Config) (Client, error) {
+func New(cfg Config) (*HostLogger, error) {
 	runtimeCfg := cfg.SDKConfig
 	if runtimeCfg.Namespace == "" {
 		runtimeCfg.Namespace = sdk.DefaultNamespace
@@ -46,18 +46,18 @@ func New(cfg Config) (Client, error) {
 		hostCall = wapc.HostCall
 	}
 
-	return &client{
+	return &HostLogger{
 		runtime:  runtimeCfg,
 		hostCall: hostCall,
 	}, nil
 }
 
-func (c *client) Info(message string)  { c.log("Info", message) }
-func (c *client) Warn(message string)  { c.log("Warn", message) }
-func (c *client) Error(message string) { c.log("Error", message) }
-func (c *client) Debug(message string) { c.log("Debug", message) }
-func (c *client) Trace(message string) { c.log("Trace", message) }
+func (c *HostLogger) Info(message string)  { c.log("Info", message) }
+func (c *HostLogger) Warn(message string)  { c.log("Warn", message) }
+func (c *HostLogger) Error(message string) { c.log("Error", message) }
+func (c *HostLogger) Debug(message string) { c.log("Debug", message) }
+func (c *HostLogger) Trace(message string) { c.log("Trace", message) }
 
-func (c *client) log(fn string, message string) {
+func (c *HostLogger) log(fn string, message string) {
 	_, _ = c.hostCall(c.runtime.Namespace, capabilityName, fn, []byte(message))
 }

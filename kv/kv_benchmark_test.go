@@ -10,6 +10,8 @@ import (
 )
 
 func BenchmarkKVClient(b *testing.B) {
+	b.ReportAllocs()
+
 	const namespace = "benchmark"
 	const capability = "kvstore"
 

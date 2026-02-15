@@ -23,7 +23,6 @@ issues:
 
 formatters:
   enable:
-    - fieldalignment # checks struct field alignment
     - goimports # checks if the code and import statements are formatted according to the 'goimports' command
     - golines # checks if code is formatted, and fixes long lines
 
@@ -162,6 +161,7 @@ linters:
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
     #- wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
   disable:
+    - dupl
     - testpackage
 
   # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml

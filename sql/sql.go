@@ -73,14 +73,14 @@ type QueryResult struct {
 	Data []byte
 }
 
-// client is a placeholder implementation for the SQL capability client.
-type client struct {
+// DBClient is the SQL capability client implementation.
+type DBClient struct {
 	runtime  sdk.RuntimeConfig
 	hostCall HostCall
 }
 
 // New creates a SQL client. Implementation will follow in future iterations.
-func New(config Config) (Client, error) {
+func New(config Config) (*DBClient, error) {
 	runtime := config.SDKConfig
 	if runtime.Namespace == "" {
 		runtime.Namespace = sdk.DefaultNamespace
@@ -91,11 +91,11 @@ func New(config Config) (Client, error) {
 		hostCall = wapc.HostCall
 	}
 
-	return &client{runtime: runtime, hostCall: hostCall}, nil
+	return &DBClient{runtime: runtime, hostCall: hostCall}, nil
 }
 
 // Exec executes a SQL statement that does not return rows.
-func (c *client) Exec(query string) (ExecResult, error) {
+func (c *DBClient) Exec(query string) (ExecResult, error) {
 	if query == "" {
 		return ExecResult{}, ErrInvalidQuery
 	}
@@ -114,13 +114,19 @@ func (c *client) Exec(query string) (ExecResult, error) {
 	var resp proto.SQLExecResponse
 	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
-			return ExecResult{}, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
+			return ExecResult{}, errors.Join(
+				sdk.ErrHostCall,
+				callErr,
+				sdk.ErrHostResponseInvalid,
+				ErrUnmarshalResponse,
+				unmarshalErr,
+			)
 		}
-		return ExecResult{}, errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
+		return ExecResult{}, errors.Join(sdk.ErrHostResponseInvalid, ErrUnmarshalResponse, unmarshalErr)
 	}
 
-	if err := validateStatus(resp.GetStatus(), callErr); err != nil {
-		return ExecResult{}, err
+	if statusErr := validateStatus(resp.GetStatus(), callErr); statusErr != nil {
+		return ExecResult{}, statusErr
 	}
 
 	return ExecResult{
@@ -130,7 +136,7 @@ func (c *client) Exec(query string) (ExecResult, error) {
 }
 
 // Query executes a SQL statement that returns rows.
-func (c *client) Query(query string) (QueryResult, error) {
+func (c *DBClient) Query(query string) (QueryResult, error) {
 	if query == "" {
 		return QueryResult{}, ErrInvalidQuery
 	}
@@ -149,13 +155,19 @@ func (c *client) Query(query string) (QueryResult, error) {
 	var resp proto.SQLQueryResponse
 	if unmarshalErr := resp.UnmarshalVT(respBytes); unmarshalErr != nil {
 		if callErr != nil {
-			return QueryResult{}, errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, unmarshalErr)
+			return QueryResult{}, errors.Join(
+				sdk.ErrHostCall,
+				callErr,
+				sdk.ErrHostResponseInvalid,
+				ErrUnmarshalResponse,
+				unmarshalErr,
+			)
 		}
-		return QueryResult{}, errors.Join(sdk.ErrHostResponseInvalid, unmarshalErr)
+		return QueryResult{}, errors.Join(sdk.ErrHostResponseInvalid, ErrUnmarshalResponse, unmarshalErr)
 	}
 
-	if err := validateStatus(resp.GetStatus(), callErr); err != nil {
-		return QueryResult{}, err
+	if statusErr := validateStatus(resp.GetStatus(), callErr); statusErr != nil {
+		return QueryResult{}, statusErr
 	}
 
 	return QueryResult{
@@ -165,7 +177,7 @@ func (c *client) Query(query string) (QueryResult, error) {
 }
 
 // Close releases resources held by the client.
-func (c *client) Close() error {
+func (c *DBClient) Close() error {
 	_ = c
 	return nil
 }
@@ -192,10 +204,10 @@ func validateStatus(status *sdkproto.Status, callErr error) error {
 		}
 		return errors.Join(sdk.ErrHostError, errors.New(detail))
 	default:
-		err := fmt.Errorf("unexpected host status code %d", code)
+		statusErr := fmt.Errorf("unexpected host status code %d", code)
 		if callErr != nil {
-			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, err)
+			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid, statusErr)
 		}
-		return errors.Join(sdk.ErrHostResponseInvalid, err)
+		return errors.Join(sdk.ErrHostResponseInvalid, statusErr)
 	}
 }

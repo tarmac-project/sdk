@@ -73,7 +73,7 @@ feat(core): add new host callback function
 ```
 
 ```
-fix(http): correct header parsing in request
+fix(httpclient): correct header parsing in request
 ```
 
 ```

@@ -7,7 +7,7 @@ updates:
     open-pull-requests-limit: 10
 
   - package-ecosystem: "gomod"
-    directory: "/http"
+    directory: "/httpclient"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10

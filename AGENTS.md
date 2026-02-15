@@ -2,16 +2,16 @@
 
 ## Project Structure & Module Organization
 - Root package `sdk` exposes runtime config and handler registration; tests live alongside (`sdk_test.go`).
-- `http/` holds the HTTP capability client, benchmarks, and host-aware tests. Coverage artifacts may appear here but should be ignored.
+- `httpclient/` holds the HTTP capability client, benchmarks, and host-aware tests. Coverage artifacts may appear here but should be ignored.
 - `hostmock/` simulates waPC host calls for integration-style assertions.
 - CI, release, and automation configs reside under `.github/` and `.release-*`.
 
 ## Build, Test, and Development Commands
-- `make build` — compiles each component (`http`, etc.) via their local Makefiles.
+- `make build` — compiles each component (`httpclient`, etc.) via their local Makefiles.
 - `make tests` — runs `go test -race -covermode=atomic` for all components and emits coverage reports.
 - `make benchmarks` — executes package benchmarks; use when tuning hot paths.
 - `make format` / `make lint` — apply gofmt/goimports/golines and run `golangci-lint`.
-- Per-package work: `make -C http tests`, `make -C http lint`, etc.
+- Per-package work: `make -C httpclient tests`, `make -C httpclient lint`, etc.
 
 ## Coding Style & Naming Conventions
 - Go 1.24+: rely on `make format` to run `gofmt`, `goimports`, and `golines`; do not hand-format.
@@ -27,7 +27,7 @@
 - Ensure race detector and coverage succeed before opening a PR.
 
 ## Commit & Pull Request Guidelines
-- Commit messages follow Conventional Commits (`type(scope): subject`), e.g., `fix(http): guard nil handler`.
+- Commit messages follow Conventional Commits (`type(scope): subject`), e.g., `fix(httpclient): guard nil handler`.
 - Summaries should be imperative, lowercase start, and omit trailing periods.
 - PRs should describe behavior changes, reference related issues, and note testing (`make tests`, `make lint`).
 

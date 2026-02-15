@@ -1,4 +1,4 @@
-package http
+package httpclient
 
 import (
 	"bytes"
@@ -26,6 +26,8 @@ func okBenchResponse() []byte {
 }
 
 func BenchmarkHTTPClient(b *testing.B) {
+	b.ReportAllocs()
+
 	// Build a client with a fast, happy-path hostmock.
 	mock, err := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  sdk.DefaultNamespace,

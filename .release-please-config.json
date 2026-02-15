@@ -36,13 +36,13 @@
       "extra-files": ["hostmock/go.mod"],
       "changelog-path": "CHANGELOG.md"
     },
-    "http": {
+    "httpclient": {
       "release-type": "go",
-      "package-name": "http",
+      "package-name": "httpclient",
       "bump-minor-pre-major": true,
       "include-component-in-tag": true,
       "include-v-in-tag": true,
-      "extra-files": ["http/go.mod"],
+      "extra-files": ["httpclient/go.mod"],
       "changelog-path": "CHANGELOG.md"
     },
     "kv": {

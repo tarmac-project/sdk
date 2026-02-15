@@ -79,6 +79,14 @@ func TestExec_Table(t *testing.T) {
 			},
 		},
 		{
+			name:    "Whitespace Query",
+			query:   " \n\t ",
+			wantErr: ErrInvalidQuery,
+			hostCall: func(string, string, string, []byte) ([]byte, error) {
+				return nil, nil
+			},
+		},
+		{
 			name:      "Host Call Failure",
 			namespace: "tarmac",
 			query:     query,
@@ -448,6 +456,14 @@ func TestQuery_Table(t *testing.T) {
 		{
 			name:    "Empty Query",
 			query:   "",
+			wantErr: ErrInvalidQuery,
+			hostCall: func(string, string, string, []byte) ([]byte, error) {
+				return nil, nil
+			},
+		},
+		{
+			name:    "Whitespace Query",
+			query:   " \n\t ",
 			wantErr: ErrInvalidQuery,
 			hostCall: func(string, string, string, []byte) ([]byte, error) {
 				return nil, nil

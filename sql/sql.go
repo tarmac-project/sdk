@@ -3,6 +3,7 @@ package sql
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	sdkproto "github.com/tarmac-project/protobuf-go/sdk"
 	proto "github.com/tarmac-project/protobuf-go/sdk/sql"
@@ -135,7 +136,7 @@ func New(config Config) (*DBClient, error) {
 
 // Exec executes a SQL statement that does not return rows.
 func (c *DBClient) Exec(query string) (ExecResult, error) {
-	if query == "" {
+	if strings.TrimSpace(query) == "" {
 		return ExecResult{}, ErrInvalidQuery
 	}
 
@@ -169,7 +170,7 @@ func (c *DBClient) Exec(query string) (ExecResult, error) {
 		RowsAffected: resp.GetRowsAffected(),
 	}
 
-	if statusErr := validateStatus(resp.GetStatus(), callErr, "sql exec"); statusErr != nil {
+	if statusErr := validateStatus(resp.GetStatus(), callErr, fnExec); statusErr != nil {
 		var partialErr *PartialResultError
 		if errors.As(statusErr, &partialErr) {
 			return result, statusErr
@@ -182,7 +183,7 @@ func (c *DBClient) Exec(query string) (ExecResult, error) {
 
 // Query executes a SQL statement that returns rows.
 func (c *DBClient) Query(query string) (QueryResult, error) {
-	if query == "" {
+	if strings.TrimSpace(query) == "" {
 		return QueryResult{}, ErrInvalidQuery
 	}
 
@@ -216,7 +217,7 @@ func (c *DBClient) Query(query string) (QueryResult, error) {
 		Data:    resp.GetData(),
 	}
 
-	if statusErr := validateStatus(resp.GetStatus(), callErr, "sql query"); statusErr != nil {
+	if statusErr := validateStatus(resp.GetStatus(), callErr, fnQuery); statusErr != nil {
 		var partialErr *PartialResultError
 		if errors.As(statusErr, &partialErr) {
 			return result, statusErr
@@ -255,14 +256,19 @@ func validateStatus(status *sdkproto.Status, callErr error, operation string) er
 			Cause:     cause,
 		}
 	case hostStatusBadInput, hostStatusMissing, hostStatusError:
-		detail := fmt.Sprintf("host status %d", code)
+		cause := error(nil)
 		if msg := status.GetStatus(); msg != "" {
-			detail = fmt.Sprintf("%s: %s", detail, msg)
+			cause = errors.New(msg)
 		}
-		if callErr != nil {
-			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostError, errors.New(detail))
+		if cause == nil {
+			cause = errors.New("host returned an error status")
 		}
-		return errors.Join(sdk.ErrHostError, errors.New(detail))
+		return &sdk.HostStatusError{
+			Capability:  capabilityName,
+			Operation:   operation,
+			Cause:       cause,
+			HostCallErr: callErr,
+		}
 	default:
 		statusErr := fmt.Errorf("unexpected host status code %d", code)
 		if callErr != nil {

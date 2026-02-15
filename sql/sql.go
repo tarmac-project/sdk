@@ -26,12 +26,51 @@ var (
 	// ErrInvalidQuery indicates an empty or invalid SQL query.
 	ErrInvalidQuery = errors.New("query is invalid")
 
+	// ErrPartialResult indicates the host returned a partial result.
+	ErrPartialResult = errors.New("operation completed with partial result")
+
 	// ErrMarshalRequest wraps failures while encoding the request payload.
 	ErrMarshalRequest = errors.New("failed to marshal request")
 
 	// ErrUnmarshalResponse wraps failures while decoding the host response.
 	ErrUnmarshalResponse = errors.New("failed to unmarshal response")
 )
+
+// PartialResultError indicates an operation completed with degraded metadata and
+// includes the underlying cause reported by the host.
+type PartialResultError struct {
+	Operation string
+	Cause     error
+}
+
+// Error returns a human-readable partial-result message.
+func (e *PartialResultError) Error() string {
+	if e == nil {
+		return ErrPartialResult.Error()
+	}
+
+	op := e.Operation
+	if op == "" {
+		op = "sql operation"
+	}
+
+	if e.Cause != nil {
+		return fmt.Sprintf("%s: %s: %v", op, ErrPartialResult, e.Cause)
+	}
+
+	return fmt.Sprintf("%s: %s", op, ErrPartialResult)
+}
+
+// Unwrap exposes both ErrPartialResult and the underlying cause to errors.Is/As.
+func (e *PartialResultError) Unwrap() []error {
+	if e == nil {
+		return []error{ErrPartialResult}
+	}
+	if e.Cause != nil {
+		return []error{ErrPartialResult, e.Cause}
+	}
+	return []error{ErrPartialResult}
+}
 
 // HostCall defines the waPC host function signature used by SQL operations.
 type HostCall func(string, string, string, []byte) ([]byte, error)
@@ -125,14 +164,20 @@ func (c *DBClient) Exec(query string) (ExecResult, error) {
 		return ExecResult{}, errors.Join(sdk.ErrHostResponseInvalid, ErrUnmarshalResponse, unmarshalErr)
 	}
 
-	if statusErr := validateStatus(resp.GetStatus(), callErr); statusErr != nil {
+	result := ExecResult{
+		LastInsertID: resp.GetLastInsertId(),
+		RowsAffected: resp.GetRowsAffected(),
+	}
+
+	if statusErr := validateStatus(resp.GetStatus(), callErr, "sql exec"); statusErr != nil {
+		var partialErr *PartialResultError
+		if errors.As(statusErr, &partialErr) {
+			return result, statusErr
+		}
 		return ExecResult{}, statusErr
 	}
 
-	return ExecResult{
-		LastInsertID: resp.GetLastInsertId(),
-		RowsAffected: resp.GetRowsAffected(),
-	}, nil
+	return result, nil
 }
 
 // Query executes a SQL statement that returns rows.
@@ -166,14 +211,20 @@ func (c *DBClient) Query(query string) (QueryResult, error) {
 		return QueryResult{}, errors.Join(sdk.ErrHostResponseInvalid, ErrUnmarshalResponse, unmarshalErr)
 	}
 
-	if statusErr := validateStatus(resp.GetStatus(), callErr); statusErr != nil {
+	result := QueryResult{
+		Columns: resp.GetColumns(),
+		Data:    resp.GetData(),
+	}
+
+	if statusErr := validateStatus(resp.GetStatus(), callErr, "sql query"); statusErr != nil {
+		var partialErr *PartialResultError
+		if errors.As(statusErr, &partialErr) {
+			return result, statusErr
+		}
 		return QueryResult{}, statusErr
 	}
 
-	return QueryResult{
-		Columns: resp.GetColumns(),
-		Data:    resp.GetData(),
-	}, nil
+	return result, nil
 }
 
 // Close releases resources held by the client.
@@ -182,7 +233,7 @@ func (c *DBClient) Close() error {
 	return nil
 }
 
-func validateStatus(status *sdkproto.Status, callErr error) error {
+func validateStatus(status *sdkproto.Status, callErr error, operation string) error {
 	if status == nil {
 		if callErr != nil {
 			return errors.Join(sdk.ErrHostCall, callErr, sdk.ErrHostResponseInvalid)
@@ -192,8 +243,17 @@ func validateStatus(status *sdkproto.Status, callErr error) error {
 
 	code := status.GetCode()
 	switch code {
-	case hostStatusOK, hostStatusPartial:
+	case hostStatusOK:
 		return nil
+	case hostStatusPartial:
+		cause := callErr
+		if cause == nil && status.GetStatus() != "" {
+			cause = errors.New(status.GetStatus())
+		}
+		return &PartialResultError{
+			Operation: operation,
+			Cause:     cause,
+		}
 	case hostStatusBadInput, hostStatusMissing, hostStatusError:
 		detail := fmt.Sprintf("host status %d", code)
 		if msg := status.GetStatus(); msg != "" {

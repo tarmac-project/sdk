@@ -19,14 +19,15 @@ func TestExec_Table(t *testing.T) {
 	want := ExecResult{LastInsertID: 42, RowsAffected: 3}
 
 	tt := []struct {
-		name       string
-		namespace  string
-		query      string
-		hostCfg    *hostmock.Config
-		hostCall   HostCall
-		want       ExecResult
-		wantErr    error
-		wantErrMsg string
+		name               string
+		namespace          string
+		query              string
+		hostCfg            *hostmock.Config
+		hostCall           HostCall
+		want               ExecResult
+		wantErr            error
+		wantErrMsg         string
+		checkResultOnError bool
 	}{
 		{
 			name:  "Default Namespace",
@@ -232,7 +233,10 @@ func TestExec_Table(t *testing.T) {
 					)
 				},
 			},
-			want: want,
+			want:               want,
+			wantErr:            ErrPartialResult,
+			wantErrMsg:         "partial",
+			checkResultOnError: true,
 		},
 		{
 			name:      "Custom Namespace",
@@ -293,6 +297,29 @@ func TestExec_Table(t *testing.T) {
 				},
 			},
 			wantErr: sdk.ErrHostCall,
+		},
+		{
+			name:      "Host Call Error With Partial Status",
+			namespace: "tarmac",
+			query:     query,
+			hostCfg: &hostmock.Config{
+				ExpectedNamespace:  "tarmac",
+				ExpectedCapability: capabilityName,
+				ExpectedFunction:   fnExec,
+				Fail:               true,
+				Error:              errors.New("host call failed"),
+				Response: func() []byte {
+					return execResponse(
+						&sdkproto.Status{Status: "rows affected unavailable", Code: 206},
+						want.LastInsertID,
+						want.RowsAffected,
+					)
+				},
+			},
+			want:               want,
+			wantErr:            ErrPartialResult,
+			wantErrMsg:         "host call failed",
+			checkResultOnError: true,
 		},
 		{
 			name:      "Host Call Error With Invalid Payload",
@@ -362,6 +389,9 @@ func TestExec_Table(t *testing.T) {
 				if tc.wantErrMsg != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErrMsg)) {
 					t.Fatalf("expected error to contain %q, got %v", tc.wantErrMsg, err)
 				}
+				if tc.checkResultOnError && got != tc.want {
+					t.Fatalf("Exec result mismatch: want %+v got %+v", tc.want, got)
+				}
 				return
 			}
 			if got != tc.want {
@@ -381,14 +411,15 @@ func TestQuery_Table(t *testing.T) {
 	}
 
 	tt := []struct {
-		name       string
-		namespace  string
-		query      string
-		hostCfg    *hostmock.Config
-		hostCall   HostCall
-		want       QueryResult
-		wantErr    error
-		wantErrMsg string
+		name               string
+		namespace          string
+		query              string
+		hostCfg            *hostmock.Config
+		hostCall           HostCall
+		want               QueryResult
+		wantErr            error
+		wantErrMsg         string
+		checkResultOnError bool
 	}{
 		{
 			name:      "Happy Path",
@@ -573,7 +604,10 @@ func TestQuery_Table(t *testing.T) {
 					return queryResponse(&sdkproto.Status{Status: "partial", Code: 206}, want.Columns, want.Data)
 				},
 			},
-			want: want,
+			want:               want,
+			wantErr:            ErrPartialResult,
+			wantErrMsg:         "partial",
+			checkResultOnError: true,
 		},
 		{
 			name:      "Custom Namespace",
@@ -634,6 +668,29 @@ func TestQuery_Table(t *testing.T) {
 				},
 			},
 			wantErr: sdk.ErrHostCall,
+		},
+		{
+			name:      "Host Call Error With Partial Status",
+			namespace: "tarmac",
+			query:     query,
+			hostCfg: &hostmock.Config{
+				ExpectedNamespace:  "tarmac",
+				ExpectedCapability: capabilityName,
+				ExpectedFunction:   fnQuery,
+				Fail:               true,
+				Error:              errors.New("host call failed"),
+				Response: func() []byte {
+					return queryResponse(
+						&sdkproto.Status{Status: "partial rows", Code: 206},
+						want.Columns,
+						want.Data,
+					)
+				},
+			},
+			want:               want,
+			wantErr:            ErrPartialResult,
+			wantErrMsg:         "host call failed",
+			checkResultOnError: true,
 		},
 		{
 			name:      "Host Call Error With Invalid Payload",
@@ -702,6 +759,9 @@ func TestQuery_Table(t *testing.T) {
 			if tc.wantErr != nil {
 				if tc.wantErrMsg != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErrMsg)) {
 					t.Fatalf("expected error to contain %q, got %v", tc.wantErrMsg, err)
+				}
+				if tc.checkResultOnError && !equalQueryResult(got, tc.want) {
+					t.Fatalf("Query result mismatch: want %+v got %+v", tc.want, got)
 				}
 				return
 			}

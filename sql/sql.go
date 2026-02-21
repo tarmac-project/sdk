@@ -119,7 +119,7 @@ type DBClient struct {
 	hostCall HostCall
 }
 
-// New creates a SQL client. Implementation will follow in future iterations.
+// New creates a SQL client with namespace defaults and optional host-call override.
 func New(config Config) (*DBClient, error) {
 	runtime := config.SDKConfig
 	if runtime.Namespace == "" {

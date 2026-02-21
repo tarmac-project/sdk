@@ -26,8 +26,6 @@ func okBenchResponse() []byte {
 }
 
 func BenchmarkHTTPClient(b *testing.B) {
-	b.ReportAllocs()
-
 	// Build a client with a fast, happy-path hostmock.
 	mock, err := hostmock.New(hostmock.Config{
 		ExpectedNamespace:  sdk.DefaultNamespace,
@@ -45,6 +43,8 @@ func BenchmarkHTTPClient(b *testing.B) {
 
 	// Shortcuts: happy path GET/POST/PUT/DELETE
 	b.Run("Shortcuts", func(b *testing.B) {
+		b.ReportAllocs()
+
 		tt := []struct {
 			name        string
 			method      string
@@ -92,6 +92,8 @@ func BenchmarkHTTPClient(b *testing.B) {
 
 	// Do: exercise multiple verbs with varying payload sizes.
 	b.Run("Do", func(b *testing.B) {
+		b.ReportAllocs()
+
 		// Prebuild payloads to avoid reallocating in the hot loop.
 		small := []byte(`{"data":"test"}`)
 		medium := bytes.Repeat([]byte("b"), 8*1024) // ~8KiB

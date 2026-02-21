@@ -27,10 +27,6 @@ type HostStatusError struct {
 
 // Error returns a human-readable host-status error message.
 func (e *HostStatusError) Error() string {
-	if e == nil {
-		return ErrHostError.Error()
-	}
-
 	target := "host operation"
 	switch {
 	case e.Capability != "" && e.Operation != "":
@@ -50,10 +46,6 @@ func (e *HostStatusError) Error() string {
 
 // Unwrap exposes sentinel and underlying causes to errors.Is/As.
 func (e *HostStatusError) Unwrap() []error {
-	if e == nil {
-		return []error{ErrHostError}
-	}
-
 	errs := []error{ErrHostError}
 	if e.HostCallErr != nil {
 		errs = append(errs, ErrHostCall, e.HostCallErr)

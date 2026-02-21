@@ -457,7 +457,6 @@ linters:
       - path: '_test\.go'
         linters:
           - bodyclose
-          - dupl
           - errcheck
           - funlen
           - gocyclo

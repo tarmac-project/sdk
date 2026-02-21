@@ -48,7 +48,7 @@ The scope could be anything specifying the place of the commit change.
 
 For example:
 * `core`
-* `http`
+* `httpclient`
 * `kv`
 * `log`
 * `metrics`

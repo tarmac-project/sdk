@@ -10,8 +10,6 @@ import (
 )
 
 func BenchmarkKVClient(b *testing.B) {
-	b.ReportAllocs()
-
 	const namespace = "benchmark"
 	const capability = "kvstore"
 
@@ -33,6 +31,7 @@ func BenchmarkKVClient(b *testing.B) {
 	clientGet, _ := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mockGet.HostCall})
 
 	b.Run("Get", func(b *testing.B) {
+		b.ReportAllocs()
 		b.ResetTimer()
 		for range b.N {
 			if _, err := clientGet.Get("benchmark-key"); err != nil {
@@ -56,6 +55,7 @@ func BenchmarkKVClient(b *testing.B) {
 	clientSet, _ := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mockSet.HostCall})
 
 	b.Run("Set", func(b *testing.B) {
+		b.ReportAllocs()
 		b.ResetTimer()
 		for range b.N {
 			if err := clientSet.Set("benchmark-key", []byte("value")); err != nil {
@@ -79,6 +79,7 @@ func BenchmarkKVClient(b *testing.B) {
 	clientDel, _ := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mockDel.HostCall})
 
 	b.Run("Delete", func(b *testing.B) {
+		b.ReportAllocs()
 		b.ResetTimer()
 		for range b.N {
 			if err := clientDel.Delete("benchmark-key"); err != nil {
@@ -105,6 +106,7 @@ func BenchmarkKVClient(b *testing.B) {
 	clientKeys, _ := New(Config{SDKConfig: sdk.RuntimeConfig{Namespace: namespace}, HostCall: mockKeys.HostCall})
 
 	b.Run("Keys", func(b *testing.B) {
+		b.ReportAllocs()
 		b.ResetTimer()
 		for range b.N {
 			if _, err := clientKeys.Keys(); err != nil {

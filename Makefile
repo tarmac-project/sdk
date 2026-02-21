@@ -10,6 +10,13 @@ tests:
 	@for dir in $(COMPONENTS); do \
 		$(MAKE) -C $$dir tests || exit 1; \
 	done
+	@echo "Merging coverage reports..."
+	@{ \
+		echo "mode: atomic"; \
+		for dir in $(COMPONENTS); do \
+			tail -n +2 "$$dir/coverage.out"; \
+		done; \
+	} > coverage.out
 
 
 

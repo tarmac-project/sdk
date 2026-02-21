@@ -849,5 +849,5 @@ func equalQueryResult(got, want QueryResult) bool {
 			return false
 		}
 	}
-	return bytes.EqualFold(got.Data, want.Data)
+	return bytes.Equal(got.Data, want.Data)
 }

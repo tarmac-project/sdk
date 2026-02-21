@@ -171,7 +171,7 @@ func TestHTTPClient(t *testing.T) {
 		}{
 			{"Do with nil request", nil, ErrNilRequest},
 			{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
-			{"Do with no shceme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, nil},
+			{"Do with no scheme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, nil},
 			{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, nil},
 			{"Do with no host URL", &Request{Method: "GET", URL: testurl.URLNoHost()}, ErrInvalidURL},
 			{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},

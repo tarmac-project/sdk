@@ -7,9 +7,7 @@ tests:
 	@echo "Running tests with coverage..."
 	go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
 	@go tool cover -func=coverage.out
-	@if command -v go >/dev/null 2>&1; then \
-		go tool cover -html=coverage.out -o coverage.html; \
-	fi
+	@go tool cover -html=coverage.out -o coverage.html
 
 # Run benchmarks
 benchmarks:

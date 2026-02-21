@@ -193,7 +193,7 @@ func (c *HTTPClient) Get(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request
@@ -211,7 +211,7 @@ func (c *HTTPClient) Post(urlStr, contentType string, body io.Reader) (*Response
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Read the body content if present
@@ -243,7 +243,7 @@ func (c *HTTPClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Read the body content if present
@@ -275,7 +275,7 @@ func (c *HTTPClient) Delete(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request
@@ -294,6 +294,11 @@ func (c *HTTPClient) Do(req *Request) (*Response, error) {
 		return &Response{}, ErrNilRequest
 	}
 
+	// Validate the URL before touching the body stream.
+	if req.URL == nil || req.URL.Host == "" {
+		return &Response{}, ErrInvalidURL
+	}
+
 	// Read the body content if present
 	var bodyBytes []byte
 	var err error
@@ -303,11 +308,6 @@ func (c *HTTPClient) Do(req *Request) (*Response, error) {
 		if err != nil {
 			return &Response{}, errors.Join(ErrReadBody, err)
 		}
-	}
-
-	// Validate the URL
-	if req.URL == nil || req.URL.Host == "" {
-		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request

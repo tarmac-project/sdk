@@ -119,6 +119,7 @@ func (c *StoreClient) Get(key string) ([]byte, error) {
 
 	// Issue the host call and always inspect the payload.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "get", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -172,6 +173,7 @@ func (c *StoreClient) Set(key string, value []byte) error {
 
 	// Issue the host call and inspect the payload even on error
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "set", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && (len(respBytes) == 0) {
 		return errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -216,6 +218,7 @@ func (c *StoreClient) Delete(key string) error {
 
 	// Invoke the host; keep the bytes for status parsing even when an error is returned.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "delete", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -255,6 +258,7 @@ func (c *StoreClient) Keys() ([]string, error) {
 
 	// Execute the host call; retain bytes even when the host reports an error.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "keys", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}

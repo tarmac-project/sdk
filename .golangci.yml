@@ -56,7 +56,6 @@ linters:
     - copyloopvar # detects places where loop variables are copied (Go 1.22+)
     - cyclop # checks function and package cyclomatic complexity
     - depguard # checks if package imports are in a list of acceptable packages
-    - dupl # tool for code clone detection
     - durationcheck # checks for two durations multiplied together
     - embeddedstructfieldcheck # checks embedded types in structs
     - errcheck # checking for unchecked errors, these unchecked errors can be critical bugs in some cases
@@ -161,7 +160,7 @@ linters:
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
     #- wsl_v5 # [too strict and mostly code is not more readable] add or remove empty lines
   disable:
-    - testpackage
+    - dupl
 
   # All settings can be found here https://github.com/golangci/golangci-lint/blob/HEAD/.golangci.reference.yml
   settings:
@@ -458,7 +457,6 @@ linters:
       - path: '_test\.go'
         linters:
           - bodyclose
-          - dupl
           - errcheck
           - funlen
           - gocyclo

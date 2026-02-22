@@ -41,8 +41,8 @@ type Config struct {
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
-// client implements Client using a configured waPC host call.
-type client struct {
+// StoreClient implements Client using a configured waPC host call.
+type StoreClient struct {
 	// runtime carries the namespace and other shared configuration for host calls.
 	runtime sdk.RuntimeConfig
 
@@ -51,10 +51,10 @@ type client struct {
 }
 
 // Ensure client implements the Client interface at compile time.
-var _ Client = (*client)(nil)
+var _ Client = (*StoreClient)(nil)
 
 // Config returns a copy of the runtime configuration.
-func (c *client) Config() sdk.RuntimeConfig {
+func (c *StoreClient) Config() sdk.RuntimeConfig {
 	return c.runtime
 }
 
@@ -81,7 +81,7 @@ const (
 )
 
 // New creates a new key-value client.
-func New(config Config) (Client, error) {
+func New(config Config) (*StoreClient, error) {
 	runtime := config.SDKConfig
 	if runtime.Namespace == "" {
 		runtime.Namespace = sdk.DefaultNamespace
@@ -92,19 +92,19 @@ func New(config Config) (Client, error) {
 		hostCall = wapc.HostCall
 	}
 
-	return &client{
+	return &StoreClient{
 		runtime:  runtime,
 		hostCall: hostCall,
 	}, nil
 }
 
 // Close releases resources associated with the client. It is a no-op.
-func (c *client) Close() error {
+func (c *StoreClient) Close() error {
 	return nil
 }
 
 // Get retrieves the value for key or returns ErrKeyNotFound if missing.
-func (c *client) Get(key string) ([]byte, error) {
+func (c *StoreClient) Get(key string) ([]byte, error) {
 	// Validate provided key
 	if key == "" {
 		return nil, ErrInvalidKey
@@ -119,6 +119,7 @@ func (c *client) Get(key string) ([]byte, error) {
 
 	// Issue the host call and always inspect the payload.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "get", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -153,7 +154,7 @@ func (c *client) Get(key string) ([]byte, error) {
 
 // Set stores value under key. It returns ErrInvalidKey or ErrInvalidValue
 // for invalid inputs, or wraps host errors.
-func (c *client) Set(key string, value []byte) error {
+func (c *StoreClient) Set(key string, value []byte) error {
 	// Validate inputs
 	if key == "" {
 		return ErrInvalidKey
@@ -172,6 +173,7 @@ func (c *client) Set(key string, value []byte) error {
 
 	// Issue the host call and inspect the payload even on error
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "set", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && (len(respBytes) == 0) {
 		return errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -201,7 +203,7 @@ func (c *client) Set(key string, value []byte) error {
 }
 
 // Delete removes key from the store. Deleting a non-existent key is not an error.
-func (c *client) Delete(key string) error {
+func (c *StoreClient) Delete(key string) error {
 	// Validate key input up front to avoid unnecessary host calls.
 	if key == "" {
 		return ErrInvalidKey
@@ -216,6 +218,7 @@ func (c *client) Delete(key string) error {
 
 	// Invoke the host; keep the bytes for status parsing even when an error is returned.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "delete", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return errors.Join(sdk.ErrHostCall, callErr)
 	}
@@ -245,7 +248,7 @@ func (c *client) Delete(key string) error {
 }
 
 // Keys returns a snapshot of keys currently in the store.
-func (c *client) Keys() ([]string, error) {
+func (c *StoreClient) Keys() ([]string, error) {
 	// Build a request that asks the host to return a protobuf-encoded key list.
 	req := &kvstore.KVStoreKeys{ReturnProto: true}
 	b, err := req.MarshalVT()
@@ -255,6 +258,7 @@ func (c *client) Keys() ([]string, error) {
 
 	// Execute the host call; retain bytes even when the host reports an error.
 	respBytes, callErr := c.hostCall(c.runtime.Namespace, "kvstore", "keys", b)
+	// Intentionally honor parseable host responses; only fail fast when no payload is available.
 	if callErr != nil && len(respBytes) == 0 {
 		return nil, errors.Join(sdk.ErrHostCall, callErr)
 	}

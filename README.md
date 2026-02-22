@@ -60,8 +60,9 @@ The project is organized into focused modules so you can depend only on what you
 | Module/Path   | Description                                        | Docs                                                      |
 | ------------- | -------------------------------------------------- | --------------------------------------------------------- |
 | `sdk`         | Core runtime config and handler registration  | <https://pkg.go.dev/github.com/tarmac-project/sdk>          |
-| `sdk/http`    | HTTP client      | <https://pkg.go.dev/github.com/tarmac-project/sdk/http>     |
+| `sdk/httpclient`    | HTTP client      | <https://pkg.go.dev/github.com/tarmac-project/sdk/httpclient>     |
 | `sdk/kv`      | Key-value client | <https://pkg.go.dev/github.com/tarmac-project/sdk/kv>       |
+| `sdk/sql`      | SQL client | <https://pkg.go.dev/github.com/tarmac-project/sdk/sql>       |
 | `sdk/hostmock` | Low-level host-call simulator for assertions | <https://pkg.go.dev/github.com/tarmac-project/sdk/hostmock> |
 | `sdk/logging` | Logging client | <https://pkg.go.dev/github.com/tarmac-project/sdk/logging> |
 

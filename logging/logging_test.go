@@ -44,17 +44,12 @@ func TestNew(t *testing.T) {
 				t.Fatalf("New returned error: %v", err)
 			}
 
-			impl, ok := cli.(*client)
-			if !ok {
-				t.Fatalf("expected *client implementation, got %T", cli)
-			}
-
-			if impl.runtime.Namespace != tc.wantNS {
-				t.Fatalf("namespace mismatch: want %q, got %q", tc.wantNS, impl.runtime.Namespace)
+			if cli.runtime.Namespace != tc.wantNS {
+				t.Fatalf("namespace mismatch: want %q, got %q", tc.wantNS, cli.runtime.Namespace)
 			}
 
 			if tc.wantHostPtr != 0 {
-				if got := reflect.ValueOf(impl.hostCall).Pointer(); got != tc.wantHostPtr {
+				if got := reflect.ValueOf(cli.hostCall).Pointer(); got != tc.wantHostPtr {
 					t.Fatalf("hostcall pointer mismatch: want %v, got %v", tc.wantHostPtr, got)
 				}
 			}

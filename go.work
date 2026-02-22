@@ -3,9 +3,10 @@ go 1.23
 use (
 	.
 	./hostmock
-	./http
+	./httpclient
 	./kv
 	./logging
+	./sql
 )
 
 replace github.com/tarmac-project/sdk v0.1.1 => ./

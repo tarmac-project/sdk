@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"errors"
-	"strings"
+	"regexp"
 
 	proto "github.com/tarmac-project/protobuf-go/sdk/metrics"
 	sdk "github.com/tarmac-project/sdk"
@@ -73,8 +73,11 @@ type Histogram struct {
 var _ Client = (*HostMetrics)(nil)
 
 var (
-	// ErrInvalidMetricName indicates an empty or whitespace-only metric name.
+	// ErrInvalidMetricName indicates a metric name that does not match the supported format.
 	ErrInvalidMetricName = errors.New("metric name is invalid")
+
+	// isMetricNameValid validates metric names using the same pattern as tarmac callback validation.
+	isMetricNameValid = regexp.MustCompile(`^[a-zA-Z0-9_:][a-zA-Z0-9_:]*$`)
 )
 
 // New creates a metrics client with namespace defaults and optional host-call override.
@@ -94,7 +97,7 @@ func New(config Config) (*HostMetrics, error) {
 
 // NewCounter creates a named counter metric handle.
 func (c *HostMetrics) NewCounter(name string) (*Counter, error) {
-	if strings.TrimSpace(name) == "" {
+	if !isMetricNameValid.MatchString(name) {
 		return nil, ErrInvalidMetricName
 	}
 
@@ -112,7 +115,7 @@ func (c *Counter) Inc() {
 
 // NewGauge creates a named gauge metric handle.
 func (c *HostMetrics) NewGauge(name string) (*Gauge, error) {
-	if strings.TrimSpace(name) == "" {
+	if !isMetricNameValid.MatchString(name) {
 		return nil, ErrInvalidMetricName
 	}
 
@@ -140,7 +143,7 @@ func (g *Gauge) emit(action string) {
 
 // NewHistogram creates a named histogram metric handle.
 func (c *HostMetrics) NewHistogram(name string) (*Histogram, error) {
-	if strings.TrimSpace(name) == "" {
+	if !isMetricNameValid.MatchString(name) {
 		return nil, ErrInvalidMetricName
 	}
 

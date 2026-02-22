@@ -129,6 +129,33 @@ func TestMetricConstructors(t *testing.T) {
 			metricName: "",
 			wantErr:    ErrInvalidMetricName,
 		},
+		{
+			name: "counter invalid hyphen",
+			constructor: func(name string) error {
+				_, callErr := c.NewCounter(name)
+				return callErr
+			},
+			metricName: "requests-total",
+			wantErr:    ErrInvalidMetricName,
+		},
+		{
+			name: "gauge invalid dot",
+			constructor: func(name string) error {
+				_, callErr := c.NewGauge(name)
+				return callErr
+			},
+			metricName: "queue.depth",
+			wantErr:    ErrInvalidMetricName,
+		},
+		{
+			name: "histogram invalid whitespace",
+			constructor: func(name string) error {
+				_, callErr := c.NewHistogram(name)
+				return callErr
+			},
+			metricName: "request duration",
+			wantErr:    ErrInvalidMetricName,
+		},
 	}
 
 	for _, tc := range tt {

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/tarmac-project/sdk/compare/v0.1.3...v0.2.0) (2026-02-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sdk:** imports using github.com/tarmac-project/sdk/http must switch to github.com/tarmac-project/sdk/httpclient.
+* **sql:** imports using github.com/tarmac-project/sdk/http must switch to github.com/tarmac-project/sdk/httpclient.
+
+### Features
+
+* **sdk:** add metrics and function capability clients ([#40](https://github.com/tarmac-project/sdk/issues/40)) ([7f1b8a0](https://github.com/tarmac-project/sdk/commit/7f1b8a0c6a131f8b18a2ad3f18bfb15771332a84))
+* **sql:** add sql package ([#36](https://github.com/tarmac-project/sdk/issues/36)) ([551edb6](https://github.com/tarmac-project/sdk/commit/551edb67d38a8c7e16520d30669051c5ec5a4038))
+
 ## [0.1.3](https://github.com/tarmac-project/sdk/compare/v0.1.2...v0.1.3) (2025-10-19)
 
 

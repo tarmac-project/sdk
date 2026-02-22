@@ -2,7 +2,7 @@
 
 all: build tests lint
 
-COMPONENTS = httpclient kv logging sql
+COMPONENTS = httpclient kv logging sql metrics function
 
 # Run tests for all components
 tests:

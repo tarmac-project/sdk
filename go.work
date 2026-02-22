@@ -2,10 +2,12 @@ go 1.23
 
 use (
 	.
+	./function
 	./hostmock
 	./httpclient
 	./kv
 	./logging
+	./metrics
 	./sql
 )
 

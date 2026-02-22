@@ -129,6 +129,7 @@ func (g *Gauge) Dec() {
 	g.emit(actionDec)
 }
 
+// emit sends a gauge action update to the host runtime as a best-effort call.
 func (g *Gauge) emit(action string) {
 	payload, err := (&proto.MetricsGauge{Name: g.name, Action: action}).MarshalVT()
 	if err != nil {

@@ -1,4 +1,4 @@
-module github.com/tarmac-project/sdk/http
+module github.com/tarmac-project/sdk/httpclient
 
 go 1.23
 

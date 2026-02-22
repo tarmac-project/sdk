@@ -30,7 +30,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
       - name: Run tests with coverage
-        run: go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: make tests
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

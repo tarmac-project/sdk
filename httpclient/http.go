@@ -1,4 +1,4 @@
-package http
+package httpclient
 
 import (
 	"bytes"
@@ -12,21 +12,6 @@ import (
 	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
 )
-
-// validMethods lists HTTP methods accepted by NewRequest.
-//
-//nolint:gochecknoglobals // required for method validation in NewRequest
-var validMethods = map[string]bool{
-	http.MethodGet:     true,
-	http.MethodHead:    true,
-	http.MethodPost:    true,
-	http.MethodPut:     true,
-	http.MethodPatch:   true,
-	http.MethodDelete:  true,
-	http.MethodConnect: true,
-	http.MethodOptions: true,
-	http.MethodTrace:   true,
-}
 
 // Client provides an interface for making HTTP requests.
 type Client interface {
@@ -62,20 +47,20 @@ type Config struct {
 	HostCall func(string, string, string, []byte) ([]byte, error)
 }
 
-// httpClient implements Client using waPC host calls.
-type httpClient struct {
+// HTTPClient implements Client using waPC host calls.
+type HTTPClient struct {
 	// cfg holds client configuration, including SDKConfig and TLS behavior.
 	cfg Config
 	// hostCall performs the waPC invocation; tests may override it.
 	hostCall func(string, string, string, []byte) ([]byte, error)
 }
 
-// Ensure httpClient always satisfies the Client interface at compile time.
-var _ Client = (*httpClient)(nil)
+// Ensure HTTPClient always satisfies the Client interface at compile time.
+var _ Client = (*HTTPClient)(nil)
 
 // doHTTPCall marshals the protobuf request, performs the host call, and
 // unmarshals the response into a Response using proto getters.
-func (c *httpClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
+func (c *HTTPClient) doHTTPCall(req *proto.HTTPClient) (*Response, error) {
 	b, err := req.MarshalVT()
 	if err != nil {
 		return &Response{}, errors.Join(ErrMarshalRequest, err)
@@ -186,8 +171,8 @@ const (
 )
 
 // New creates a new HTTP client with the provided configuration.
-func New(config Config) (Client, error) {
-	hc := &httpClient{cfg: config}
+func New(config Config) (*HTTPClient, error) {
+	hc := &HTTPClient{cfg: config}
 
 	// Set default namespace if not provided
 	if hc.cfg.SDKConfig.Namespace == "" {
@@ -204,11 +189,11 @@ func New(config Config) (Client, error) {
 }
 
 // Get issues a GET to the specified URL and returns the response.
-func (c *httpClient) Get(urlStr string) (*Response, error) {
+func (c *HTTPClient) Get(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request
@@ -222,11 +207,11 @@ func (c *httpClient) Get(urlStr string) (*Response, error) {
 }
 
 // Post issues a POST to the URL with the provided contentType and body.
-func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response, error) {
+func (c *HTTPClient) Post(urlStr, contentType string, body io.Reader) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Read the body content if present
@@ -254,11 +239,11 @@ func (c *httpClient) Post(urlStr, contentType string, body io.Reader) (*Response
 }
 
 // Put issues a PUT to the URL with the provided contentType and body.
-func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response, error) {
+func (c *HTTPClient) Put(urlStr, contentType string, body io.Reader) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Read the body content if present
@@ -286,11 +271,11 @@ func (c *httpClient) Put(urlStr, contentType string, body io.Reader) (*Response,
 }
 
 // Delete issues a DELETE to the specified URL.
-func (c *httpClient) Delete(urlStr string) (*Response, error) {
+func (c *HTTPClient) Delete(urlStr string) (*Response, error) {
 	// Validate the URL
 	u, err := url.Parse(urlStr)
 	if err != nil || u == nil || u.Host == "" {
-		return nil, ErrInvalidURL
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request
@@ -304,9 +289,14 @@ func (c *httpClient) Delete(urlStr string) (*Response, error) {
 }
 
 // Do issues a custom request built with NewRequest and returns the response.
-func (c *httpClient) Do(req *Request) (*Response, error) {
+func (c *HTTPClient) Do(req *Request) (*Response, error) {
 	if req == nil {
 		return &Response{}, ErrNilRequest
+	}
+
+	// Validate the URL before touching the body stream.
+	if req.URL == nil || req.URL.Host == "" {
+		return &Response{}, ErrInvalidURL
 	}
 
 	// Read the body content if present
@@ -318,11 +308,6 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 		if err != nil {
 			return &Response{}, errors.Join(ErrReadBody, err)
 		}
-	}
-
-	// Validate the URL
-	if req.URL == nil || req.URL.Host == "" {
-		return &Response{}, ErrInvalidURL
 	}
 
 	// Create the Protobuf request
@@ -350,7 +335,7 @@ func (c *httpClient) Do(req *Request) (*Response, error) {
 // specific methods, URLs and body content.
 func NewRequest(method, urlString string, body io.Reader) (*Request, error) {
 	// Validate the HTTP method first
-	if _, ok := validMethods[method]; !ok {
+	if !isValidMethod(method) {
 		return nil, ErrInvalidMethod
 	}
 
@@ -373,4 +358,21 @@ func NewRequest(method, urlString string, body io.Reader) (*Request, error) {
 	}
 
 	return req, nil
+}
+
+func isValidMethod(method string) bool {
+	switch method {
+	case http.MethodGet,
+		http.MethodHead,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodDelete,
+		http.MethodConnect,
+		http.MethodOptions,
+		http.MethodTrace:
+		return true
+	default:
+		return false
+	}
 }

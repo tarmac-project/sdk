@@ -48,7 +48,7 @@ The scope could be anything specifying the place of the commit change.
 
 For example:
 * `core`
-* `http`
+* `httpclient`
 * `kv`
 * `log`
 * `metrics`
@@ -73,7 +73,7 @@ feat(core): add new host callback function
 ```
 
 ```
-fix(http): correct header parsing in request
+fix(httpclient): correct header parsing in request
 ```
 
 ```

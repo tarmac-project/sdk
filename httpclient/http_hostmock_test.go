@@ -1,4 +1,4 @@
-package http
+package httpclient
 
 import (
 	"bytes"
@@ -403,10 +403,6 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 		PayloadValidator:   validateInsecure(true),
 		Response:           okResponse,
 	}
-	client, err := newClientWith(mockCfg)
-	if err != nil {
-		t.Fatalf("client: %v", err)
-	}
 
 	// Override to set InsecureSkipVerify = true
 	mock, _ := hostmock.New(mockCfg)
@@ -423,7 +419,6 @@ func TestHTTPClientHostMock_InsecureFlag(t *testing.T) {
 	if _, gerr := c.Get("http://example.com"); gerr != nil {
 		t.Fatalf("get: %v", gerr)
 	}
-	_ = client // silence unused variable in case of future expansion
 }
 
 func TestHTTPClientHostMock_NoBodyResponses(t *testing.T) {

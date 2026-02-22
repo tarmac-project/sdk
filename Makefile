@@ -2,7 +2,7 @@
 
 all: build tests lint
 
-COMPONENTS = http kv logging
+COMPONENTS = httpclient kv logging sql metrics function
 
 # Run tests for all components
 tests:
@@ -10,6 +10,13 @@ tests:
 	@for dir in $(COMPONENTS); do \
 		$(MAKE) -C $$dir tests || exit 1; \
 	done
+	@echo "Merging coverage reports..."
+	@{ \
+		echo "mode: atomic"; \
+		for dir in $(COMPONENTS); do \
+			tail -n +2 "$$dir/coverage.out"; \
+		done; \
+	} > coverage.out
 
 
 

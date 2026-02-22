@@ -18,6 +18,14 @@ const (
 	actionDec      = "dec"
 )
 
+var (
+	// ErrInvalidMetricName indicates a metric name that does not match the supported format.
+	ErrInvalidMetricName = errors.New("metric name is invalid")
+
+	// isMetricNameValid validates metric names using the same pattern as tarmac callback validation.
+	isMetricNameValid = regexp.MustCompile(`^[a-zA-Z0-9_:][a-zA-Z0-9_:]*$`)
+)
+
 // HostCall defines the waPC host function signature used by metrics operations.
 type HostCall func(string, string, string, []byte) ([]byte, error)
 
@@ -71,14 +79,6 @@ type Histogram struct {
 
 // Ensure HostMetrics satisfies the Client interface at compile time.
 var _ Client = (*HostMetrics)(nil)
-
-var (
-	// ErrInvalidMetricName indicates a metric name that does not match the supported format.
-	ErrInvalidMetricName = errors.New("metric name is invalid")
-
-	// isMetricNameValid validates metric names using the same pattern as tarmac callback validation.
-	isMetricNameValid = regexp.MustCompile(`^[a-zA-Z0-9_:][a-zA-Z0-9_:]*$`)
-)
 
 // New creates a metrics client with namespace defaults and optional host-call override.
 func New(config Config) (*HostMetrics, error) {

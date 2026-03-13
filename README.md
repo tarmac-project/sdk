@@ -26,7 +26,8 @@ You can also use the low-level hostmock to simulate hostcalls to Tarmac if you w
 ### Prerequisites
 
 - Go 1.23 or newer
-- Protobuf support ships with the module—generated clients already use vtprotobuf `MarshalVT` helpers.
+- Protobuf support ships with the module. Generated clients currently use
+  `protoc-gen-go-lite` and expose helpers such as `MarshalVT`.
 
 Register your handler with the SDK:
 

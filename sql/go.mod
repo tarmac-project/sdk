@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/tarmac-project/protobuf-go v0.1.0
-	github.com/tarmac-project/sdk v0.1.1
+	github.com/tarmac-project/sdk v0.2.0
 	github.com/tarmac-project/sdk/hostmock v0.1.1
 	github.com/wapc/wapc-guest-tinygo v0.3.3
 )

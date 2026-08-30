@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/tarmac-project/sdk/compare/sql/v0.2.0...sql/v0.2.1) (2026-08-30)
+
+
+### Bug Fixes
+
+* **logging:** align hostcalls and harden release gates ([556490f](https://github.com/tarmac-project/sdk/commit/556490fbbaf90a17a44523c61ae406c85d84b9e1))
+* **logging:** align hostcalls and strengthen release verification ([b57fe3f](https://github.com/tarmac-project/sdk/commit/b57fe3f451c6a829e6e5839fbecacbb47b4bcaef))
+
 ## [0.2.0](https://github.com/tarmac-project/sdk/compare/sql/v0.1.0...sql/v0.2.0) (2026-02-22)
 
 

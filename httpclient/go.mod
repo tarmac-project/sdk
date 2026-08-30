@@ -1,9 +1,8 @@
 module github.com/tarmac-project/sdk/httpclient
 
-go 1.24.3
+go 1.23
 
 require (
-	github.com/madflojo/testlazy/things/testurl v1.2.0
 	github.com/tarmac-project/protobuf-go v0.1.0
 	github.com/tarmac-project/sdk v0.1.1
 	github.com/tarmac-project/sdk/hostmock v0.1.1

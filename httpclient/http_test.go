@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -12,8 +13,6 @@ import (
 	proto "github.com/tarmac-project/protobuf-go/sdk/http"
 	sdk "github.com/tarmac-project/sdk"
 	"github.com/tarmac-project/sdk/hostmock"
-
-	"github.com/madflojo/testlazy/things/testurl"
 )
 
 var ErrTestBadReader = errors.New("bad reader error")
@@ -164,34 +163,39 @@ func TestHTTPClient(t *testing.T) {
 
 	// Run Indepth Do method tests
 	t.Run("Do", func(t *testing.T) {
+		httpsURL := &url.URL{Scheme: "https", Host: "example.com"}
+		noSchemeURL := &url.URL{Host: "example.com"}
+		invalidHostURL := &url.URL{Scheme: "https", Host: "invalid.invalid"}
+		noHostURL := &url.URL{Scheme: "https"}
+
 		tt := []struct {
 			name        string
 			request     *Request
 			expectedErr error
 		}{
 			{"Do with nil request", nil, ErrNilRequest},
-			{"Do with valid request", &Request{Method: "GET", URL: testurl.URLHTTPS()}, nil},
-			{"Do with no scheme URL", &Request{Method: "GET", URL: testurl.URLNoScheme()}, nil},
-			{"Do with invalid host URL", &Request{Method: "GET", URL: testurl.URLInvalidHost()}, nil},
-			{"Do with no host URL", &Request{Method: "GET", URL: testurl.URLNoHost()}, ErrInvalidURL},
+			{"Do with valid request", &Request{Method: "GET", URL: httpsURL}, nil},
+			{"Do with no scheme URL", &Request{Method: "GET", URL: noSchemeURL}, nil},
+			{"Do with invalid host URL", &Request{Method: "GET", URL: invalidHostURL}, nil},
+			{"Do with no host URL", &Request{Method: "GET", URL: noHostURL}, ErrInvalidURL},
 			{"Do with empty URL", &Request{Method: "GET"}, ErrInvalidURL},
 			{
 				"Do POST with body",
 				&Request{
 					Method: http.MethodPost,
-					URL:    testurl.URLHTTPS(),
+					URL:    httpsURL,
 					Header: make(http.Header),
 					Body:   io.NopCloser(strings.NewReader(`{"x":"y"}`)),
 				},
 				nil,
 			},
-			{"Do HEAD", &Request{Method: http.MethodHead, URL: testurl.URLHTTPS()}, nil},
-			{"Do OPTIONS", &Request{Method: http.MethodOptions, URL: testurl.URLHTTPS()}, nil},
+			{"Do HEAD", &Request{Method: http.MethodHead, URL: httpsURL}, nil},
+			{"Do OPTIONS", &Request{Method: http.MethodOptions, URL: httpsURL}, nil},
 			{
 				"Do with bad reader",
 				&Request{
 					Method: http.MethodPost,
-					URL:    testurl.URLHTTPS(),
+					URL:    httpsURL,
 					Body:   io.NopCloser(iotest.ErrReader(ErrTestBadReader)),
 				},
 				ErrReadBody,

@@ -1,11 +1,33 @@
 package logging
 
 import (
+	"errors"
+	"fmt"
+
 	sdk "github.com/tarmac-project/sdk"
 	wapc "github.com/wapc/wapc-guest-tinygo"
 )
 
-const capabilityName = "logging"
+const capabilityName = "logger"
+
+// Level identifies a logging operation supported by the Tarmac host.
+type Level string
+
+const (
+	// LevelInfo records normal operational messages.
+	LevelInfo Level = "info"
+	// LevelWarn records conditions that may require attention.
+	LevelWarn Level = "warn"
+	// LevelError records failed operations.
+	LevelError Level = "error"
+	// LevelDebug records diagnostic messages.
+	LevelDebug Level = "debug"
+	// LevelTrace records fine-grained diagnostic messages.
+	LevelTrace Level = "trace"
+)
+
+// ErrInvalidLevel indicates that Log received an unsupported level.
+var ErrInvalidLevel = errors.New("logging level is invalid")
 
 // Client exposes convenience helpers for sending log entries to the host runtime.
 type Client interface {
@@ -52,12 +74,23 @@ func New(cfg Config) (*HostLogger, error) {
 	}, nil
 }
 
-func (c *HostLogger) Info(message string)  { c.log("Info", message) }
-func (c *HostLogger) Warn(message string)  { c.log("Warn", message) }
-func (c *HostLogger) Error(message string) { c.log("Error", message) }
-func (c *HostLogger) Debug(message string) { c.log("Debug", message) }
-func (c *HostLogger) Trace(message string) { c.log("Trace", message) }
+func (c *HostLogger) Info(message string)  { _ = c.Log(LevelInfo, message) }
+func (c *HostLogger) Warn(message string)  { _ = c.Log(LevelWarn, message) }
+func (c *HostLogger) Error(message string) { _ = c.Log(LevelError, message) }
+func (c *HostLogger) Debug(message string) { _ = c.Log(LevelDebug, message) }
+func (c *HostLogger) Trace(message string) { _ = c.Log(LevelTrace, message) }
 
-func (c *HostLogger) log(fn string, message string) {
-	_, _ = c.hostCall(c.runtime.Namespace, capabilityName, fn, []byte(message))
+// Log sends a message to the host and reports validation or hostcall failures.
+func (c *HostLogger) Log(level Level, message string) error {
+	switch level {
+	case LevelInfo, LevelWarn, LevelError, LevelDebug, LevelTrace:
+	default:
+		return fmt.Errorf("%w: %q", ErrInvalidLevel, level)
+	}
+
+	if _, err := c.hostCall(c.runtime.Namespace, capabilityName, string(level), []byte(message)); err != nil {
+		return errors.Join(sdk.ErrHostCall, err)
+	}
+
+	return nil
 }

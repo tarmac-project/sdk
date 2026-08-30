@@ -1,0 +1,65 @@
+name: Published Module Smoke
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  schedule:
+    - cron: '17 9 * * 1'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published:
+    name: Published SDK modules
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Select released module
+        if: github.event_name == 'release'
+        working-directory: testdata/tinygo
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          case "$RELEASE_TAG" in
+            v*) module=github.com/tarmac-project/sdk; version="$RELEASE_TAG" ;;
+            hostmock/v*) echo "No TinyGo fixture for hostmock"; exit 0 ;;
+            function/v*|httpclient/v*|kv/v*|logging/v*|metrics/v*|sql/v*)
+              module="github.com/tarmac-project/sdk/${RELEASE_TAG%/*}"
+              version="${RELEASE_TAG##*/}"
+              ;;
+            *) echo "Unsupported release tag: $RELEASE_TAG" >&2; exit 1 ;;
+          esac
+          go get "${module}@${version}"
+      - name: Build published module graph
+        working-directory: testdata/tinygo
+        run: go build -mod=readonly ./...
+      - name: Build published modules with TinyGo 0.41.1
+        env:
+          TINYGO_IMAGE: tinygo/tinygo:0.41.1
+        run: |
+          docker run --rm \
+            --volume "$PWD:/src" \
+            --workdir /src/testdata/tinygo \
+            --env GOFLAGS=-buildvcs=false \
+            --env GOWORK=off \
+            --entrypoint sh \
+            "$TINYGO_IMAGE" \
+            -c 'set -eu
+          for package in root function httpclient kv logging metrics sql; do
+            tinygo build -target=wasip1 -scheduler=none --no-debug -buildmode=c-shared \
+              -o "/tmp/${package}.wasm" "./cmd/${package}"
+          done'

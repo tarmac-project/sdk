@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Go ${{ matrix.go-version }}
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.23.x', '1.26.x']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: false
+      - name: Build all modules
+        run: make build
+      - name: Run race tests with coverage
+        run: make tests
+      - name: Check fixture module metadata
+        if: matrix.go-version == '1.26.x'
+        run: make fixture-module-tidy
+      - name: Check independent module graphs
+        run: make module-check fixture-module-check
+      - name: Upload coverage to Codecov
+        if: matrix.go-version == '1.26.x'
+        uses: codecov/codecov-action@v7
+        with:
+          file: coverage.out
+          flags: unittests
+          name: codecov-root
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ['.', hostmock, function, httpclient, kv, logging, metrics, sql]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2
+          working-directory: ${{ matrix.module }}
+
+  tinygo:
+    name: TinyGo ${{ matrix.tinygo-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tinygo-version: '0.34.0'
+            build-args: '-target=wasi'
+          - tinygo-version: '0.41.1'
+            build-args: '-target=wasip1 -scheduler=none --no-debug -buildmode=c-shared'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build candidate modules
+        env:
+          TINYGO_IMAGE: tinygo/tinygo:${{ matrix.tinygo-version }}
+          TINYGO_BUILD_ARGS: ${{ matrix.build-args }}
+        run: |
+          docker run --rm \
+            --volume "$PWD:/src" \
+            --workdir /src \
+            --env GOFLAGS=-buildvcs=false \
+            --env TINYGO_BUILD_ARGS \
+            --entrypoint sh \
+            "$TINYGO_IMAGE" \
+            -c 'set -eu
+          for package in root function httpclient kv logging metrics sql; do
+            tinygo build $TINYGO_BUILD_ARGS -o "/tmp/${package}.wasm" "./testdata/tinygo/cmd/${package}"
+          done'
+
+  release-please:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, tinygo]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@v5
+        with:
+          command: manifest
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json

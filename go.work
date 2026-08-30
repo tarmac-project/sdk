@@ -1,4 +1,4 @@
-go 1.24.3
+go 1.23
 
 use (
 	.
@@ -9,8 +9,23 @@ use (
 	./logging
 	./metrics
 	./sql
+	./testdata/tinygo
 )
 
 replace github.com/tarmac-project/sdk v0.1.1 => ./
 
+replace github.com/tarmac-project/sdk v0.2.0 => ./
+
+replace github.com/tarmac-project/sdk/function v0.2.0 => ./function
+
 replace github.com/tarmac-project/sdk/hostmock v0.1.1 => ./hostmock
+
+replace github.com/tarmac-project/sdk/httpclient v0.2.0 => ./httpclient
+
+replace github.com/tarmac-project/sdk/kv v0.2.0 => ./kv
+
+replace github.com/tarmac-project/sdk/logging v0.2.0 => ./logging
+
+replace github.com/tarmac-project/sdk/metrics v0.2.0 => ./metrics
+
+replace github.com/tarmac-project/sdk/sql v0.2.0 => ./sql

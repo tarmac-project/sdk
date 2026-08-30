@@ -1,1 +1,5 @@
-github.com/tarmac-project/sdk v0.2.0/go.mod h1:G1FkDLzCzIuAhKbCfzbqeOpB3eBAS0tmMCeb5q0ID0s=
+github.com/tarmac-project/sdk/function v0.2.0/go.mod h1:gZrTGClAVcHC1zLHgUfvJMdoSJq/No5t7GJs1tcBuWI=
+github.com/tarmac-project/sdk/httpclient v0.2.0/go.mod h1:JHpJMzo3agvyNUOrzdZwLkO+A/GkeQBaEHlV+imKqYg=
+github.com/tarmac-project/sdk/kv v0.2.0/go.mod h1:nBKmS8Suh43lwGU9OB6fn1YjpkI8UeO95x00nrnZU5o=
+github.com/tarmac-project/sdk/logging v0.2.0/go.mod h1:VE5RXrlM42/hTzg8iU6GT6Uqbx3U23wce4tTmXXd9jU=
+github.com/tarmac-project/sdk/sql v0.2.0/go.mod h1:4C6gUd2o6B6+cLuWJ0DLNESJbMmgZD90o3OtARdNOGc=
